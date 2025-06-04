@@ -605,7 +605,7 @@ geom0 = compute_geometry(bladeFilePath,
                          d_factor_guess = 0.5)
 
 # (B) derive a data-driven d_factor
-d_factor = compute_d_factor(wedge_angle_deg = geom0['wedge_angle'],
+d_factor = compute_d_factor(wedge_angle_deg = np.degrees(geom0['wedge_angle']),
                             axial_chord     = geom0['axial_chord'],
                             te_thickness    = geom0['te_open_thickness'])
 
