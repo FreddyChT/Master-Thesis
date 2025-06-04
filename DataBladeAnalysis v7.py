@@ -898,8 +898,8 @@ def main_from_datablade():
         
         # ------------------ PHYSICAL GROUPS ------------------
         f.write('Physical Curve("inlet", 18001) = {153};\n')
-        f.write('Physical Curve("simmetricWallsBOTTOM", 18002) = {150};\n')
-        f.write('Physical Curve("simmetricWallsTOP",    18003) = {152};\n')
+        f.write('Physical Curve("symmetricWallsBOTTOM", 18002) = {150};\n')
+        f.write('Physical Curve("symmetricWallsTOP",    18003) = {152};\n')
         f.write('Physical Curve("outlet", 18004) = {151};\n')
         f.write('Physical Curve("blade1", 18005) = {2000, 1000};\n')
         f.write('Physical Surface("fluid", 18008) = {5};\n') 
@@ -1002,7 +1002,7 @@ MARKER_ANALYZE          = ( inlet, outlet, blade1 )                         % Ma
 
 MARKER_INLET            = ( inlet, {T01}, {P01}, {np.cos(alpha1 * np.pi / 180)}, {np.sin(alpha1 * np.pi / 180)}, 0)
 MARKER_OUTLET           = ( outlet,  {P2})
-MARKER_PERIODIC         = ( simmetricWallsBOTTOM, simmetricWallsTOP, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, {pitch}, 0.0 )
+MARKER_PERIODIC         = ( symmetricWallsBOTTOM, symmetricWallsTOP, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, {pitch}, 0.0 )
 %MARKER_INLET_TURBULENT = ( inlet, TI2, nu_factor2 )          %SST Model
 %MARKER_INLET_TURBULENT = ( inlet,  nu_factor2 )                %SA Model
 
