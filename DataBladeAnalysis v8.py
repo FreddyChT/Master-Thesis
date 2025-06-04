@@ -47,7 +47,7 @@ from OCC.Core.gp import gp_Pnt
 # - Mach Distribution file
 # Others to be determined when checking other files
 
-# --------------------------- FILES SLECTION ---------------------------
+# --------------------------- FILE SELECTION ---------------------------
 
 bladeName = "blade" #Change this name depending on the blade you want to study
 no_cores = 12 # Change this to switch the processing power of the computation (numbers of used cores)
