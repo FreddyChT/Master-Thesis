@@ -24,8 +24,9 @@ from scipy.interpolate import interp1d
 from scipy.optimize import fsolve
 from scipy.interpolate import UnivariateSpline
 from scipy.interpolate import CubicSpline
-from mpl_toolkits.mplot3d import Axes3D  
+from mpl_toolkits.mplot3d import Axes3D
 import openpyxl                                    # Excel reader
+from pathlib import Path
 # pyOCC imports
 from OCC.Core.TColgp import TColgp_Array1OfPnt
 from OCC.Core.TColStd import TColStd_Array1OfReal, TColStd_Array1OfInteger
@@ -49,19 +50,31 @@ from OCC.Core.gp import gp_Pnt
 
 # --------------------------- FILE SELECTION ---------------------------
 
-bladeName = "blade" #Change this name depending on the blade you want to study
-no_cores = 12 # Change this to switch the processing power of the computation (numbers of used cores)
-string = "databladeVALIDATION" # File names
-string2 = "safe_start" # For SU2 optimization
+bladeName = "blade"  # Change this name depending on the blade you want to study
+no_cores = 12         # MPI cores for SU2
+string = "databladeVALIDATION"  # File names suffix
+string2 = "safe_start"          # For SU2 optimization
 fileExtension = "csv"
 
-current_directory = os.path.dirname(os.path.abspath(__file__))
-isesFileName = f"ises.{string}"
-bladeFileName = f"{bladeName}.{string}"
-outletFileName = f"outlet.{string}"
-isesFilePath = os.path.join(current_directory, isesFileName)
-bladeFilePath = os.path.join(current_directory, bladeFileName)
-outletFilePath = os.path.join(current_directory, outletFileName)
+# Directory layout
+base_dir = Path(__file__).resolve().parent
+blade_dir = base_dir / "Blades" / bladeName
+
+# Directory where results of each run are stored
+from datetime import datetime
+run_root = blade_dir / "results"
+run_root.mkdir(exist_ok=True)
+
+date_str = datetime.now().strftime("%Y-%m-%d")
+n = 1
+while (run_root / f"Test_{n}_{date_str}").exists():
+    n += 1
+run_dir = run_root / f"Test_{n}_{date_str}"
+run_dir.mkdir()
+
+isesFilePath = blade_dir / f"ises.{string}"
+bladeFilePath = blade_dir / f"{bladeName}.{string}"
+outletFilePath = blade_dir / f"outlet.{string}"
 
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -151,10 +164,9 @@ def read_selig_airfoil(path):
 
 #Data Blade Validation file creation
 def copy_blade_file(original_filename):
-    current_directory = os.path.dirname(os.path.abspath(__file__))
-    original_filepath = os.path.join(current_directory, original_filename)
-    new_filename = original_filename + ".databladeValidation"     #Construct the new file name
-    new_filepath = os.path.join(current_directory, new_filename)
+    original_filepath = blade_dir / original_filename
+    new_filename = original_filename + ".databladeValidation"     # Construct the new file name
+    new_filepath = blade_dir / new_filename
     shutil.copyfile(original_filepath, new_filepath) # Copy the file
     #print(f"Copied '{original_filename}' to '{new_filename}'.")
 
@@ -737,7 +749,7 @@ def mesh_datablade():
     m1 = np.tan(alpha1*np.pi/180)
     m2 = np.tan(alpha2*np.pi/180)
 
-    geo_file = os.path.join(current_directory, f"cascade2D{string}_{bladeName}.geo")
+    geo_file = run_dir / f"cascade2D{string}_{bladeName}.geo"
     with open(geo_file, 'w') as f:
         # ------------------ AIRFOIL CURVES ------------------
         # Top Airfoil (SS)
@@ -1119,8 +1131,8 @@ SURFACE_FILENAME        = surface_flow{string}_{bladeName}
 '''
 
     # Write the information to the AIRFOIL file
-    with open(f"cascade2D{string}_{bladeName}.cfg", "w") as f:
-        f.write(data_airfoil)    
+    with open(run_dir / f"cascade2D{string}_{bladeName}.cfg", "w") as f:
+        f.write(data_airfoil)
 
 # Run the main function
 if __name__ == "__main__":
@@ -1136,7 +1148,7 @@ if __name__ == "__main__":
 if __name__ == "__main__":
     
     # Run SU2 simulation using the config file.
-    config_file = os.path.join(current_directory, f"cascade2D{string}_{bladeName}.cfg")
+    config_file = run_dir / f"cascade2D{string}_{bladeName}.cfg"
     try:
         if os.path.exists(config_file):
             print(f"Config file exists at: {config_file}")
@@ -1151,7 +1163,7 @@ if __name__ == "__main__":
     #  HISTORY FILE TRACKING - Residuals, Linear Solvers, CFL, CD, CL           
     #################################################################################
     
-    hist = pd.read_csv(f'history_{string}_{bladeName}.csv')
+    hist = pd.read_csv(run_dir / f"history_{string}_{bladeName}.csv")
     
     # RMS Tracking
     plt.plot(hist['Inner_Iter'], hist['    "rms[Rho]"    '], label='ρ')                     # Density
@@ -1299,7 +1311,7 @@ def SU2_DataPlotting(
     else:
         plt.xlim(0, 1)
     plt.legend(loc='upper left', prop={'size': 20}, edgecolor='k', fancybox=False)
-    plt.savefig(f"non-normalized{quantity}_{string}_{bladeName}.svg", format='svg', bbox_inches='tight')
+    plt.savefig(run_dir / f"non-normalized{quantity}_{string}_{bladeName}.svg", format='svg', bbox_inches='tight')
     plt.show()
 
 
@@ -1491,7 +1503,7 @@ def surfaceFlowAnalysis_datablade():
     #   SU2 DATA
     # ─────────────────────────────────────────────────────────────────────────────
 
-    su2_file = os.path.join(current_directory, f"surface_flow{string}_{bladeName}.csv")
+    su2_file = run_dir / f"surface_flow{string}_{bladeName}.csv"
     df = pd.read_csv(su2_file, sep=',')
     x      = df['x'].values
     y      = df['y'].values
@@ -1554,7 +1566,7 @@ def surfaceFlowAnalysis_datablade():
     
     #Again we read the files in the directory
     resultsFileName = f"machDistribution.{string}"
-    resultsFilePath = os.path.join(current_directory, resultsFileName)
+    resultsFilePath = blade_dir / resultsFileName
     
     #We extract the MISES surface infromation in lists for upper and lower surfaces
     with open(file=resultsFilePath, mode='r') as f:
