@@ -162,3 +162,26 @@ SURFACE_FILENAME        = surface_flow{string}_{bladeName}
     with open(run_dir / f"cascade2D{string}_{bladeName}.cfg", "w") as f:
         f.write(data_airfoil)
 
+def runSU2_datablade():
+    # Run SU2 simulation using the config file.
+    config_file = run_dir / f"cascade2D{string}_{bladeName}.cfg"
+    try:
+        if os.path.exists(config_file):
+            print(f"Config file exists at: {config_file}")
+        else:
+            print(f"Config file not found at: {config_file}")
+            return
+        
+        # Save current working directory
+        orig_dir = os.getcwd()
+        # Change to the directory where the config file is located
+        os.chdir(run_dir)
+        
+        # Run SU2 from the config directory
+        os.system(f'mpiexec -n {no_cores} SU2_CFD "{config_file}"')
+        print("SU2 Run Initialized!")
+    except Exception as e:
+        print("Error", e)
+    finally:
+        # Return to the original working directory
+        os.chdir(orig_dir)

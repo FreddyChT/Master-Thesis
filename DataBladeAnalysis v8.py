@@ -681,6 +681,11 @@ TI2 = 2.2 #[%]
 #                                                                                   #
 #####################################################################################                                                                                  
 
+# --------------------------- GEOMETRY EXTRACTION ---------------------------
+out = process_airfoil_file(bladeFilePath, n_points=1000, n_te=60, d_factor=d_factor)
+xSS, ySS, _, _ = out['ss']
+xPS, yPS, _, _ = out['ps']
+
 # --------------------------- GENERAL MESH PARAMETERS ---------------------------
 sizeCellFluid: float = 0.02 * axial_chord       # Fluid related cell size
 sizeCellAirfoil: float = 0.02 * axial_chord     # Airfoil related cell size
@@ -702,19 +707,36 @@ dist_LE             = 0.01 * axial_chord        # For LE refinement
 size_TE             = 0.1  * sizeCellAirfoil    # For TE refinement
 dist_TE             = 0.01 * axial_chord        # For TE refinement
 
-# -------------------------- REFINEMENT PARAMETERS -----------------------------
-VolWAkeIn           = 0.35 * sizeCellFluid
-VolWAkeOut          = sizeCellFluid
-WakeXMin            = -0.1 * axial_chord 
-WakeXMax            = (dist_outlet - 1.5) * axial_chord
+# --------------------------- EDGE BOUNDARY POINTS ---------------------------
+L1x = dist_inlet * axial_chord
+L2x = (dist_outlet - 1) * axial_chord           # distance from leading edge is 1 axial chord
+m1 = np.tan(alpha1*np.pi/180)
+m2 = np.tan(alpha2*np.pi/180)
 
+# Outer boundary points (IDs unchanged)
+x15000 = -L1x
+y15000 = m1*(x15000 - xPS[0]) + yPS[0] - pitch/2
+x15001 = L2x
+y15001 = m2*(x15001 - xPS[-1]) + yPS[-1] - pitch/2
+x15002 = x15001
+y15002 = y15001 + pitch
+x15003 = x15000
+y15003 = y15000 + pitch
+x15004 = x15001 + axial_chord
+y15004 = y15001
+x15005 = x15004
+y15005 = y15002
+Y_range     = np.max([np.abs(y15001), np.abs(y15002)])
+
+# -------------------------- REFINEMENT PARAMETERS -----------------------------
+VolWAkeIn   = 0.35 * sizeCellFluid
+VolWAkeOut  = sizeCellFluid
+WakeXMin    = -0.1 * axial_chord 
+WakeXMax    = (dist_outlet - 1.5) * axial_chord
+WakeYMin    = -Y_range
+WakeYMax    = Y_range
 
 def mesh_datablade():       
-    
-    # --------------------------- GEOMETRY EXTRACTION ---------------------------
-    out = process_airfoil_file(bladeFilePath, n_points=1000, n_te=60, d_factor=d_factor)
-    xSS, ySS, _, _ = out['ss']
-    xPS, yPS, _, _ = out['ps']
     
     '''
     # ── GLOBAL BL THICKNESS & y⁺‑based first‑cell height (uses inlet ρ₂, U₂) ──
@@ -738,17 +760,7 @@ def mesh_datablade():
     BL_THICKNESS      = (BL_THICKNESSxSS + BL_THICKNESSxPS) / 2
     BL_RATIO          = (BL_RATIOxSS + BL_RATIOxPS) / 2
     '''
-    # --------------------------- BOUNDARY POINTS ---------------------------
-    L1x = dist_inlet * axial_chord
-    #L1 = L1x / abs(np.cos(alpha1 * np.pi/180))
-    #L1y = L1 * abs(np.sin(alpha1 * np.pi/180))
-    L2x = (dist_outlet - 1) * axial_chord                     # distance from leading edge is 1 axial chord
-    #L2 = L2x / abs(np.cos(alpha2 * np.pi/180))
-    #L2y = L2 * abs(np.sin(alpha2 * np.pi/180))
     
-    m1 = np.tan(alpha1*np.pi/180)
-    m2 = np.tan(alpha2*np.pi/180)
-
     geo_file = run_dir / f"cascade2D{string}_{bladeName}.geo"
     with open(geo_file, 'w') as f:
         # ------------------ AIRFOIL CURVES ------------------
@@ -775,26 +787,6 @@ def mesh_datablade():
         for pt in bottomPts[1:-1]:
             f.write(f"{pt}, ")
         f.write(f"{TE_ID}}}; \n")
-    
-        
-        # Outer boundary points (IDs unchanged)
-        x15000 = -L1x
-        y15000 = m1*(x15000 - xPS[0]) + yPS[0] - pitch/2
-        
-        x15001 = L2x
-        y15001 = m2*(x15001 - xPS[-1]) + yPS[-1] - pitch/2
-        
-        x15002 = x15001
-        y15002 = y15001 + pitch
-        
-        x15003 = x15000
-        y15003 = y15000 + pitch
-        
-        x15004 = x15001 + axial_chord
-        y15004 = y15001
-        
-        x15005 = x15004
-        y15005 = y15002
         
         # ------------------ OUTER BOUNDARY POINTS & LINES ------------------
         f.write(f"k = {sizeCellFluid}; \n")
@@ -1636,19 +1628,9 @@ def surfaceFlowAnalysis_datablade():
     #   PLOTTING
     # ─────────────────────────────────────────────────────────────────────────────
     
-    # ---------- Single overlay of Mach
-    
-    SU2_DataPlotting(
-        sSSnorm     = s_normSS,
-        sPSnorm     = s_normPS,
-        dataSS      = machSS,
-        dataPS      = machPS,
-        quantity    ="Mach Number",
-        string      = string,
-        mirror_PS   = False,
-        exp_x       = blade_frac,
-        exp_mach    = blade_mach
-    )
+    SU2_DataPlotting(s_normSS, s_normPS, machSS, machPS,
+                 "Mach Number", string, run_dir, bladeName, 
+                 mirror_PS=True, exp_x=blade_frac, exp_mach=blade_mach)
     
     SU2_DataPlotting(s_normSS, s_normPS, yPlusSS, yPlusPS,
                  "Y Plus", string, mirror_PS=True)
