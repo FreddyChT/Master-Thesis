@@ -39,7 +39,7 @@ def main():
     
     # --- USER INPUTS 
     parser = argparse.ArgumentParser(description="Run blade analysis")
-    parser.add_argument('--blade', default='blade', help='Blade name')
+    parser.add_argument('--blade', default='Blade_1', help='Blade name')
     parser.add_argument('--no_cores', type=int, default=12, help='MPI cores for SU2')
     parser.add_argument('--suffix', default='databladeVALIDATION', help='File name suffix')
     parser.add_argument('--opt_tag', default='safe_start', help='Optimization tag')
