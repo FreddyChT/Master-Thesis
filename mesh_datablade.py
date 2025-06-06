@@ -4,11 +4,14 @@ from utils import process_airfoil_file
 
 
 def mesh_datablade():
-    
     # --------------------------- GEOMETRY EXTRACTION ---------------------------
-    out = process_airfoil_file(bladeFilePath, n_points=1000, n_te=60, d_factor=d_factor)
-    xSS, ySS, _, _ = out['ss']
-    xPS, yPS, _, _ = out['ps']
+    # read_spleen_airfoil returns: PS then SS.
+    out = process_airfoil_file(bladeFilePath, n_points=1000, n_te=60, d_factor=0.5)
+    if 'csv' in out:
+        xPS, yPS, xSS, ySS = out['csv']
+    else:
+        xSS, ySS, _, _ = out['ss']
+        xPS, yPS, _, _ = out['ps']
     
     '''
     # ── GLOBAL BL THICKNESS & y⁺‑based first‑cell height (uses inlet ρ₂, U₂) ──
@@ -42,9 +45,10 @@ def mesh_datablade():
     
     m1 = np.tan(alpha1*np.pi/180)
     m2 = np.tan(alpha2*np.pi/180)
-
+    
     geo_file = run_dir / f"cascade2D{string}_{bladeName}.geo"
     with open(geo_file, 'w') as f:
+        
         # ------------------ AIRFOIL CURVES ------------------
         # Top Airfoil (SS)
         f.write("// AIRFOIL TOP \n")
@@ -69,7 +73,6 @@ def mesh_datablade():
         for pt in bottomPts[1:-1]:
             f.write(f"{pt}, ")
         f.write(f"{TE_ID}}}; \n")
-    
         
         # Outer boundary points (IDs unchanged)
         x15000 = -L1x
@@ -212,8 +215,8 @@ def mesh_datablade():
         f.write(f"Field[7].XMin  = { WakeXMin };\n")
         f.write(f"Field[7].XMax  = { WakeXMax };\n")
         # full pitch height, centered on camber line (y=0)
-        f.write(f"Field[7].YMin  = { y15001 };\n")
-        f.write(f"Field[7].YMax  = { pitch };\n")
+        f.write(f"Field[7].YMin  = { WakeYMin };\n")
+        f.write(f"Field[7].YMax  = { WakeYMax };\n")
         # flat 2D mesh
         f.write("Field[7].ZMin  = 0;\n")
         f.write("Field[7].ZMax  = 0;\n")

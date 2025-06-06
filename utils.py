@@ -9,6 +9,9 @@ from OCC.Core.TColStd import TColStd_Array1OfReal, TColStd_Array1OfInteger
 from OCC.Core.Geom import Geom_BSplineCurve
 from OCC.Core.gp import gp_Pnt
 
+# ────────────────────────────────────────────────────────────────────────────────
+# File reading and extraction
+# ────────────────────────────────────────────────────────────────────────────────
 def extract_from_ises(file_path):
     #Opens the given file, skips header lines, and extracts the first numerical value from the next line.
     with open(file_path, 'r') as f:
@@ -100,9 +103,8 @@ def copy_blade_file(original_filename, blade_dir):
 
 
 # ────────────────────────────────────────────────────────────────────────────────
-# 2) NURBS-based TE closure
+# NURBS-based TE closure
 # ────────────────────────────────────────────────────────────────────────────────
-
 def calculate_intersection_point(P0, vr, P3, vs, d):
     """
     Promote 2D→3D, compute control points CP1 & CP2 for C2-continuous closure.
@@ -170,7 +172,7 @@ def sample_nurbs(curve, n_te):
 
 
 # ────────────────────────────────────────────────────────────────────────────────
-# 3) Airfoil resampling via arc-length + cubic spline
+# Airfoil resampling via arc-length + cubic spline
 # ────────────────────────────────────────────────────────────────────────────────
 def resample_side(x, y, n_pts):
     dx = np.diff(x); dy = np.diff(y)
@@ -265,9 +267,8 @@ def compute_d_factor(wedge_angle_deg: float,
 
 
 # ────────────────────────────────────────────────────────────────────────────────
-# 4) Blade Geometry
+# Blade Geometry
 # ────────────────────────────────────────────────────────────────────────────────
-
 #  Helper – least–squares circle fit  (Taubin 1991 algebraic form)
 def fit_circle(x, y):
     """
@@ -427,9 +428,23 @@ def compute_geometry(path_to_airfoil,
     
     return geom
 
+def surface_fraction(xvals, yvals):
+    """
+    Normalizes arc lengths to get xSSnorm, xPSnorm for plotting on [0..1].
+    """
+    dx = np.diff(xvals)
+    dy = np.diff(yvals)
+    seg = np.sqrt(dx**2 + dy**2)
+    arc = np.cumsum(seg)
+    arc = np.insert(arc, 0, 0.0)
+    if arc[-1] != 0:
+        return arc / arc[-1]
+    else:
+        return arc
+
 
 # ────────────────────────────────────────────────────────────────────────────────
-# 5) Boundary Layer Function
+# Boundary Layer Function
 # ────────────────────────────────────────────────────────────────────────────────
 
 def boundary_layer_props(x, rhoFlow, velFlow, muFlow, ReTurb=5e5):
@@ -466,7 +481,7 @@ def boundary_layer_props(x, rhoFlow, velFlow, muFlow, ReTurb=5e5):
 
 
 # ────────────────────────────────────────────────────────────────────────────────
-# 6) Computation Helper Functions
+# Computation Helper Functions
 # ────────────────────────────────────────────────────────────────────────────────
 
 def compute_Mx(P0x, Px, gamma):
@@ -485,9 +500,9 @@ def compute_rhox(Px, Tx, R):
     rhox = Px / (R*Tx)
     return rhox
 
-#def compute_miux(mu0, T01, Tx, S):
-#    mux = mu0 * (T01+S)/(Tx+S)*(Tx/T01)**1.5
-#    return mux
+def compute_miux(mu0, T01, Tx, S):
+    mux = mu0 * (T01+S)/(Tx+S)*(Tx/T01)**1.5
+    return mux
 
 def compute_mux(Tx):
     mux = (1.458e-6 * Tx**1.5) / (Tx + 110.4)
@@ -529,30 +544,17 @@ def compute_Spec_Dissipation(k, ILS):
     C_mu = 0.09
     omega = C_mu**(3/4) * k**(1/2)/ILS
     return omega
-def surface_fraction(xvals, yvals):
-    """
-    Normalizes arc lengths to get xSSnorm, xPSnorm for plotting on [0..1].
-    """
-    dx = np.diff(xvals)
-    dy = np.diff(yvals)
-    seg = np.sqrt(dx**2 + dy**2)
-    arc = np.cumsum(seg)
-    arc = np.insert(arc, 0, 0.0)
-    if arc[-1] != 0:
-        return arc / arc[-1]
-    else:
-        return arc
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+#   SU2 Post-Processing
+# ─────────────────────────────────────────────────────────────────────────────
 def roll_array(arr, shift):
     """
     Rolls the arrays so that idx_maxP is placed at index 0.
     Ensures the suction side starts at the max‐pressure location for easy plotting.
     """
     return np.concatenate([arr[shift:], arr[:shift]])
-
-# ─────────────────────────────────────────────────────────────────────────────
-#   SU2 UTILITIES
-# ─────────────────────────────────────────────────────────────────────────────
 
 def SU2_organize(df):
     """
@@ -639,7 +641,7 @@ def SU2_DataPlotting(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#   MISES UTILITIES
+#   MISES Post-Processing
 # ─────────────────────────────────────────────────────────────────────────────
 
 def MISES_blDataGather(file_path):
