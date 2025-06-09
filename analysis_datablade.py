@@ -1,4 +1,4 @@
-1# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Created on Thu Feb 13 17:54:39 2025
 
@@ -30,6 +30,152 @@ import post_processing_datablade
 # Defaults can be overridden from the command line
 BLADEROOT = Path(__file__).resolve().parent
 
+def create_rerun_script(run_dir, bladeName, base_dir,
+                        no_cores, string, string2, fileExtension,
+                        alpha1_deg, alpha2_deg, Re, M1, P21_ratio,
+                        pitch, d_factor, stagger, axial_chord,
+                        R, gamma, mu, T01, P01, P2,
+                        dist_inlet, dist_outlet, TI2,
+                        sizeCellFluid, sizeCellAirfoil,
+                        nCellAirfoil, nCellPerimeter, nBoundaryPoints,
+                        first_layer_height, bl_growth, bl_thickness,
+                        size_LE, dist_LE, size_TE, dist_TE,
+                        VolWAkeIn, VolWAkeOut,
+                        WakeXMin, WakeXMax, WakeYMin, WakeYMax):
+    """Write a runnable Python script inside *run_dir* to rerun or replot."""
+    date_str = datetime.now().strftime('%d-%m-%Y, %H:%M:%S')
+    script_path = Path(run_dir) / "rerun.py"
+    content = f"""
+#!/usr/bin/env python3
+#Created on {date_str}
+#@author: Freddy Chica
+#Disclaimer: GPT-o3 & Codex were heavily used for the elaboration of this script
+
+import argparse
+from pathlib import Path
+import mesh_datablade
+import configSU2_datablade
+import post_processing_datablade
+
+bladeName = {bladeName!r}
+no_cores = {no_cores}
+string = {string!r}
+string2 = {string2!r}
+fileExtension = {fileExtension!r}
+alpha1 = {alpha1_deg}
+alpha2 = {alpha2_deg}
+Re = {Re}
+M1 = {M1}
+P21_ratio = {P21_ratio}
+pitch = {pitch}
+d_factor = {d_factor}
+stagger = {stagger}
+axial_chord = {axial_chord}
+R = {R}
+gamma = {gamma}
+mu = {mu}
+T01 = {T01}
+P01 = {P01}
+P2 = {P2}
+dist_inlet = {dist_inlet}
+dist_outlet = {dist_outlet}
+TI2 = {TI2}
+sizeCellFluid = {sizeCellFluid}
+sizeCellAirfoil = {sizeCellAirfoil}
+nCellAirfoil = {nCellAirfoil}
+nCellPerimeter = {nCellPerimeter}
+nBoundaryPoints = {nBoundaryPoints}
+first_layer_height = {first_layer_height}
+bl_growth = {bl_growth}
+bl_thickness = {bl_thickness}
+size_LE = {size_LE}
+dist_LE = {dist_LE}
+size_TE = {size_TE}
+dist_TE = {dist_TE}
+VolWAkeIn = {VolWAkeIn}
+VolWAkeOut = {VolWAkeOut}
+WakeXMin = {WakeXMin}
+WakeXMax = {WakeXMax}
+WakeYMin = {WakeYMin}
+WakeYMax = {WakeYMax}
+
+run_dir = Path(__file__).resolve().parent
+base_dir = Path({str(base_dir)!r})
+blade_dir = base_dir / 'Blades' / bladeName
+isesFilePath = blade_dir / f'ises.{string}'
+bladeFilePath = blade_dir / f'{bladeName}.{string}'
+outletFilePath = blade_dir / f'outlet.{string}'
+
+for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
+    mod.bladeName = bladeName
+    mod.no_cores = no_cores
+    mod.string = string
+    mod.string2 = string2
+    mod.fileExtension = fileExtension
+    mod.base_dir = base_dir
+    mod.blade_dir = blade_dir
+    mod.run_dir = run_dir
+    mod.isesFilePath = isesFilePath
+    mod.bladeFilePath = bladeFilePath
+    mod.outletFilePath = outletFilePath
+    mod.alpha1 = alpha1
+    mod.alpha2 = alpha2
+    mod.Re = Re
+    mod.M1 = M1
+    mod.P21_ratio = P21_ratio
+    mod.pitch = pitch
+    mod.d_factor = d_factor
+    mod.stagger = stagger
+    mod.axial_chord = axial_chord
+    mod.R = R
+    mod.gamma = gamma
+    mod.mu = mu
+    mod.T01 = T01
+    mod.P01 = P01
+    mod.P2 = P2
+    mod.dist_inlet = dist_inlet
+    mod.dist_outlet = dist_outlet
+    mod.TI2 = TI2
+    mod.sizeCellFluid = sizeCellFluid
+    mod.sizeCellAirfoil = sizeCellAirfoil
+    mod.nCellAirfoil = nCellAirfoil
+    mod.nCellPerimeter = nCellPerimeter
+    mod.nBoundaryPoints = nBoundaryPoints
+    mod.first_layer_height = first_layer_height
+    mod.bl_growth = bl_growth
+    mod.bl_thickness = bl_thickness
+    mod.size_LE = size_LE
+    mod.dist_LE = dist_LE
+    mod.size_TE = size_TE
+    mod.dist_TE = dist_TE
+    mod.VolWAkeIn = VolWAkeIn
+    mod.VolWAkeOut = VolWAkeOut
+    mod.WakeXMin = WakeXMin
+    mod.WakeXMax = WakeXMax
+    mod.WakeYMin = WakeYMin
+    mod.WakeYMax = WakeYMax
+
+def rerun():
+    mesh_datablade.mesh_datablade()
+    configSU2_datablade.configSU2_datablade()
+    configSU2_datablade.runSU2_datablade()
+    post_processing_datablade.post_processing_datablade()
+
+def replot():
+    post_processing_datablade.post_processing_datablade()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--mode', choices=['rerun', 'replot'], default='replot')
+    args = parser.parse_args()
+    if args.mode == 'rerun':
+        rerun()
+    else:
+        replot()
+"""
+    with open(script_path, 'w') as f:
+        f.write(content)
+
 
 def main():
     
@@ -39,7 +185,7 @@ def main():
     
     # --- USER INPUTS 
     parser = argparse.ArgumentParser(description="Run blade analysis")
-    parser.add_argument('--blade', default='Blade_1', help='Blade name')
+    parser.add_argument('--blade', default='blade', help='Blade name')
     parser.add_argument('--no_cores', type=int, default=12, help='MPI cores for SU2')
     parser.add_argument('--suffix', default='databladeVALIDATION', help='File name suffix')
     parser.add_argument('--opt_tag', default='safe_start', help='Optimization tag')
@@ -58,7 +204,7 @@ def main():
 
     run_root = blade_dir / 'results'
     run_root.mkdir(exist_ok=True)
-    date_str = datetime.now().strftime('%Y-%m-%d')
+    date_str = datetime.now().strftime('%d-%m-%Y')
     n = 1
     while (run_root / f'Test_{n}_{date_str}').exists():
         n += 1
@@ -101,8 +247,8 @@ def main():
     
     alpha1_deg = int(np.degrees(np.arctan(alpha1)))
     alpha2_deg = int(np.degrees(np.arctan(alpha2)))
-    dist_inlet = 2
-    dist_outlet = 3
+    dist_inlet = 1
+    dist_outlet = 2
     TI2 = 2.2
     
     # ─────────────────────────────────────────────────────────────────────────────
@@ -134,24 +280,14 @@ def main():
     dist_LE = 0.01 * axial_chord
     size_TE = 0.1 * sizeCellAirfoil
     dist_TE = 0.01 * axial_chord
-    
-    # --- EDGE BOUNDARY POINTS 
-    L2x = (dist_outlet - 1) * axial_chord           # distance from leading edge is 1 axial chord
-    m2 = np.tan(alpha2*np.pi/180)
-
-    # Outer boundary points (IDs unchanged)
-    x15001 = L2x
-    y15001 = m2*(x15001 - xPS[-1]) + yPS[-1] - pitch/2
-    y15002 = y15001 + pitch
-    Y_range     = np.max([np.abs(y15001), np.abs(y15002)])
 
     # --- REFINEMENT PARAMETERS 
     VolWAkeIn   = 0.35 * sizeCellFluid
     VolWAkeOut  = sizeCellFluid
-    WakeXMin    = -0.1 * axial_chord 
-    WakeXMax    = (dist_outlet - 1.5) * axial_chord
-    WakeYMin    = -Y_range
-    WakeYMax    = Y_range
+    WakeXMin    = 0.1 * axial_chord 
+    WakeXMax    = (dist_outlet + 0.5) * axial_chord
+    WakeYMin    = -2 * pitch
+    WakeYMax    =  2 * pitch
     
 
     # expose variables to modules
@@ -203,11 +339,24 @@ def main():
         mod.WakeXMax = WakeXMax
         mod.WakeYMin = WakeYMin
         mod.WakeYMax = WakeYMax
-
+        
+    create_rerun_script(run_dir, bladeName, base_dir,
+                        no_cores, string, string2, fileExtension,
+                        alpha1_deg, alpha2_deg, Re, M1, P21_ratio,
+                        pitch, d_factor, stagger, axial_chord,
+                        R, gamma, mu, T01, P01, P2,
+                        dist_inlet, dist_outlet, TI2,
+                        sizeCellFluid, sizeCellAirfoil,
+                        nCellAirfoil, nCellPerimeter, nBoundaryPoints,
+                        first_layer_height, bl_growth, bl_thickness,
+                        size_LE, dist_LE, size_TE, dist_TE,
+                        VolWAkeIn, VolWAkeOut,
+                        WakeXMin, WakeXMax, WakeYMin, WakeYMax)
+    
     mesh_datablade.mesh_datablade()
-    configSU2_datablade.configSU2_datablade()
-    configSU2_datablade.runSU2_datablade()
-    post_processing_datablade.post_processing_datablade()
+    #configSU2_datablade.configSU2_datablade()
+    #configSU2_datablade.runSU2_datablade()
+    #post_processing_datablade.post_processing_datablade()
 
 if __name__ == '__main__':
     main()

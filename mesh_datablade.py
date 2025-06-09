@@ -2,16 +2,25 @@ import os
 import numpy as np
 from utils import process_airfoil_file
 
+'''
+bladeFilePath, run_dir, string, bladeName,                           # File management                
+dist_inlet, dist_outlet,                                             # Inlet / outlet definition
+axial_chord, pitch, d_factor,                                        # Geometric parameters
+x15000, y15000, x15001, y15001,                                      # Mesh boundary points
+x15002, y15002, x15003, y15003,           
+sizeCellAirfoil, sizeCellFluid,                                      # Grid element sizes
+nBoundaryPoints, nCellAirfoil, nCellPerimeter,                       # Grid no. elements
+first_layer_height, bl_growth, bl_thickness,                         # BL definition
+size_LE, dist_LE, size_TE, dist_TE,                                  # LE & TE refinement
+VolWAkeIn, VolWAkeOut, WakeXMin, WakeXMax, WakeYMin, WakeYMax        # Wake / airfoil refinement
+'''
 
 def mesh_datablade():
     # --------------------------- GEOMETRY EXTRACTION ---------------------------
     # read_spleen_airfoil returns: PS then SS.
     out = process_airfoil_file(bladeFilePath, n_points=1000, n_te=60, d_factor=0.5)
-    if 'csv' in out:
-        xPS, yPS, xSS, ySS = out['csv']
-    else:
-        xSS, ySS, _, _ = out['ss']
-        xPS, yPS, _, _ = out['ps']
+    xSS, ySS, _, _ = out['ss']
+    xPS, yPS, _, _ = out['ps']
     
     '''
     # ── GLOBAL BL THICKNESS & y⁺‑based first‑cell height (uses inlet ρ₂, U₂) ──
@@ -39,7 +48,7 @@ def mesh_datablade():
     L1x = dist_inlet * axial_chord
     #L1 = L1x / abs(np.cos(alpha1 * np.pi/180))
     #L1y = L1 * abs(np.sin(alpha1 * np.pi/180))
-    L2x = (dist_outlet - 1) * axial_chord                     # distance from leading edge is 1 axial chord
+    L2x = (dist_outlet + 1) * axial_chord                     # distance from leading edge is 1 axial chord
     #L2 = L2x / abs(np.cos(alpha2 * np.pi/180))
     #L2y = L2 * abs(np.sin(alpha2 * np.pi/180))
     
@@ -100,15 +109,12 @@ def mesh_datablade():
         f.write(f"Point(15001) = {{{x15001:.16e}, {y15001:.16e}, 0, k}};\n") 
         f.write(f"Point(15002) = {{{x15002:.16e}, {y15002:.16e}, 0, k}};\n") 
         f.write(f"Point(15003) = {{{x15003:.16e}, {y15003:.16e}, 0, k}};\n\n") # inlet top
-        f.write(f"Point(15004) = {{{x15004:.16e}, {y15004:.16e}, 0, k}};\n") # outlet bottom
-        f.write(f"Point(15005) = {{{x15005:.16e}, {y15005:.16e}, 0, k}};\n\n") # outlet top
-        
         
         # ------------------ OUTER PERIMETER (node‑to‑node periodic) ------------------
         xMean = (np.array(xSS) + np.array(xPS)) / 2
         yMean = (np.array(ySS) + np.array(yPS)) / 2
         
-        f.write("\n// --- bottom boundary polyline --------------------------------\n")
+        f.write("\n// Bottom boundary polyline \n")
         # sample the mean line at nBoundaryPoints, excluding the two endpoints
         idxs = np.linspace(0, len(xMean)-1, nBoundaryPoints).astype(int)
         bottom_idxs = idxs[1:-1]  # keep for reuse
@@ -120,30 +126,27 @@ def mesh_datablade():
             xb, yb = xMean[idx], yMean[idx] - pitch/2
             f.write(f"Point({pid}) = {{{xb:.16e}, {yb:.16e}, 0, k}};\n")
             bottom_ids.append(pid)
-        bottom_ids.append('15001, 15004')
+        bottom_ids.append('15001')
         f.write(f"Line(150) = {{{', '.join(map(str, bottom_ids))}}};\n")
         
-        f.write("\n// --- top boundary polyline (translate bottom_ids by +pitch) ---\n")
+        f.write("\n// Top boundary polyline (translate bottom_ids by +pitch) \n")
         top_ids = [15003]
         for ii, idx in enumerate(bottom_idxs):
             tpid = 15100 + ii + 100
             xt, yt = xMean[idx], yMean[idx] + pitch/2
             f.write(f"Point({tpid}) = {{{xt:.16e}, {yt:.16e}, 0, k}};\n")
             top_ids.append(tpid)
-        top_ids.append('15002, 15005')
+        top_ids.append('15002')
         f.write(f"Line(152) = {{{', '.join(map(str, top_ids))}}};\n")
         
-        f.write("\n// --- single inlet/outlet lines ------------------------------\n")
+        f.write("\n// Single inlet/outlet lines \n")
         f.write("Line(153) = {15000, 15003};   // inlet\n")
-        f.write("Line(151) = {15004, 15005};   // outlet\n")
-        
-        f.write("\n// --- mesh boundary loop --------------------------------------\n")
-        f.write("Curve Loop(50) = {150, 151, -152, -153};\n\n")
+        f.write("Line(151) = {15001, 15002};   // outlet\n")
         
         # ------------------ CURVE LOOPS ------------------
-        f.write("\n// Curve Loop 10 (airfoil)\n")
+        f.write("\n// Curve Loop airfoil & boundary edge\n")
         f.write("Curve Loop(10) = {1000, -2000};\n")
-        f.write("\n// already wrote Curve Loop 50 above\n\n")
+        f.write("Curve Loop(50) = {150, 151, -152, -153};\n\n")
         
         # ------------------ PLANE SURFACES ------------------
         # Now define plane surfaces from the curve loops.
