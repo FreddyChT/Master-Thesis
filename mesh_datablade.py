@@ -133,6 +133,7 @@ def mesh_datablade():
         # Airfoil and Boundary layer curves
         f.write(f"Transfinite Curve {{1000}} = {nCellAirfoil} Using Progression 1; \n")
         f.write(f"Transfinite Curve {{2000}} = {nCellAirfoil} Using Progression 1; \n")
+
         # Airfoil and Mesh boundary curves
         f.write(f"Transfinite Curve {{10}} = {nCellPerimeter} Using Progression 1; \n")
         f.write(f"Transfinite Curve {{50}} = {nCellPerimeter} Using Progression 1; \n")
@@ -182,7 +183,7 @@ def mesh_datablade():
         #  NEW 4 ─ Wake strip refinement via Box field
         # ---------------------------------------------------------------------
         f.write("\nField[7] = Box;\n")
-        f.write(f"Field[7].VIn   = { VolWAkeIn };\n")           # background size inside box
+        f.write(f"Field[7].VIn   = { VolWAkeIn };\n")      # 0.25 background size inside box
         f.write(f"Field[7].VOut  = { VolWAkeOut };\n")          # background size outside
         # box from just upstream of LE (−0.1·c) to outlet (+dist_outlet·c)
         f.write(f"Field[7].XMin  = { WakeXMin };\n")
