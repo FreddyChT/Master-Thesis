@@ -8,6 +8,7 @@ from OCC.Core.TColgp import TColgp_Array1OfPnt
 from OCC.Core.TColStd import TColStd_Array1OfReal, TColStd_Array1OfInteger
 from OCC.Core.Geom import Geom_BSplineCurve
 from OCC.Core.gp import gp_Pnt
+from math import log10, sqrt
 
 # ────────────────────────────────────────────────────────────────────────────────
 # File reading and extraction
@@ -444,8 +445,117 @@ def surface_fraction(xvals, yvals):
 
 
 # ────────────────────────────────────────────────────────────────────────────────
-# Boundary Layer Function
+# Boundary Layer Functions
 # ────────────────────────────────────────────────────────────────────────────────
+
+# Boundary-layer sizing helpers
+
+def first_cell_height_yplus_1(U_inf: float,
+                              rho:   float,
+                              mu:    float,
+                              y_plus_target: float = 1.0,
+                              L_ref: float     = 1.0,
+                              ) -> float:
+    """
+    Returns y₁ so that y⁺ = y_plus_target at a reference location *L_ref*
+    downstream of the leading edge (use ≈ 0.02–0.05 c for conservative sizing).
+    """
+    Re_x = rho * U_inf * L_ref / mu
+    Cf   = (2.0 * log10(Re_x) - 0.65) ** -2.3   # For Re < 10^9
+    tau_w  = 0.5 * Cf * rho * U_inf**2     # wall shear stress
+    u_tau  = np.sqrt(tau_w / rho)             # friction velocity
+    y1     = y_plus_target * mu / (rho * u_tau)
+    return y1
+
+
+def bl_thickness_flat_plate(U_inf: float,
+                            rho: float,
+                            mu: float,
+                            x: float,
+                            Re_transition: float = 5.0e5
+                            ) -> float:
+    """
+    Classical flat-plate δ₉₉ correlations.
+      – laminar (Blasius): δ = 5 x / √Re_x
+      – turbulent 1/7-power: δ = 0.37 x / Re_x⁰·²
+    """
+    Re_x = rho * U_inf * x / mu
+    if Re_x <= Re_transition:                       # laminar
+        return 5.0 * x / sqrt(Re_x)
+    return 0.37 * x / (Re_x ** 0.2)                 # turbulent
+
+
+def bl_growth_ratio(n_layers: int, y1: float, delta: float) -> float:
+    """
+    Solves   δ = y₁ (rⁿ – 1)/(r – 1)     for the geometric ratio r.
+    Uses Newton iteration – usually converges in <6 steps for 1 < r < 1.4.
+    """
+    if n_layers < 2:
+        raise ValueError("Need at least 2 layers to determine a growth ratio.")
+
+    def f(r):        # residual
+        return y1 * (r**n_layers - 1.0) / (r - 1.0) - delta
+
+    def df(r):       # derivative
+        return y1 * (
+            (n_layers * r**(n_layers - 1) * (r - 1.0) -
+             (r**n_layers - 1.0)) / (r - 1.0)**2
+        )
+
+    r = 1.2  # good initial guess
+    for _ in range(20):
+        r_new = r - f(r) / df(r)
+        if abs(r_new - r) < 1e-6:
+            return r_new
+        r = r_new
+    raise RuntimeError("Growth-ratio solver did not converge.")
+
+
+# Convenience wrapper that gives everything Gmsh wants
+def compute_bl_parameters(U_inf: float,
+                          rho: float,
+                          mu: float,
+                          chord_axial: float,
+                          *,
+                          n_layers: int       = 25,
+                          y_plus_target: float = 1.0,
+                          x_ref_yplus: float   = 0.02,
+                          x_ref_delta: float   = 1.0   # TE ≈ 1 cₐ
+                          ):
+    """
+    Returns a dict with:
+        first_layer_height  → Field[1].hwall_n
+        bl_growth           → Field[1].ratio
+        bl_thickness        → Field[1].thickness
+    All lengths are in meters, ready to inject into the *.geo* template.
+    Parameters
+    ----------
+    U_inf, rho, mu : inlet freestream conditions
+    chord_axial    : axial chord [m]
+    n_layers       : number of prism layers you intend to use
+    y_plus_target  : your y⁺ goal (default = 1)
+    x_ref_yplus    : streamwise station for y⁺ sizing,
+                     given as a multiple of *cₐ* (default 0.02 cₐ)
+    x_ref_delta    : station for δ₉₉ (default 1 cₐ → near TE)
+    """
+    x_yplus = x_ref_yplus * chord_axial
+    x_delta = x_ref_delta * chord_axial
+
+    y1 = first_cell_height_yplus_1(U_inf, rho, mu,
+                                   y_plus_target=y_plus_target,
+                                   L_ref=x_yplus)
+    delta = bl_thickness_flat_plate(U_inf, rho, mu, x_delta)
+    r = bl_growth_ratio(n_layers, y1, delta)
+
+    return dict(first_layer_height=y1,
+                bl_growth=r,
+                bl_thickness=delta)
+
+
+
+
+
+
 
 def boundary_layer_props(x, rhoFlow, velFlow, muFlow, ReTurb=5e5):
     """

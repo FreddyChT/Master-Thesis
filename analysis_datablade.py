@@ -220,7 +220,9 @@ def main():
     pitch = utils.extract_from_blade(bladeFilePath)
     M1, P21_ratio = utils.extract_from_outlet(outletFilePath)
     
-    # --- BLADE GEOMETRY 
+    # ─────────────────────────────────────────────────────────────────────────────
+    #   BLADE GEOMETRY 
+    # ─────────────────────────────────────────────────────────────────────────────
     geom0 = utils.compute_geometry(bladeFilePath, pitch=pitch, d_factor_guess=0.5)
     d_factor = utils.compute_d_factor(np.degrees(geom0['wedge_angle']),
                                       axial_chord=geom0['axial_chord'],
@@ -231,7 +233,9 @@ def main():
     stagger = geom['stagger_angle']
     axial_chord = geom['axial_chord']
     
-    # --- BOUNDARY CONDITIONS 
+    # ─────────────────────────────────────────────────────────────────────────────
+    #   BOUNDARY CONDITIONS 
+    # ───────────────────────────────────────────────────────────────────────────── 
     R = 287.058
     gamma = 1.4
     mu = 1.716e-5
@@ -254,7 +258,6 @@ def main():
     # ─────────────────────────────────────────────────────────────────────────────
     #   MESHING
     # ─────────────────────────────────────────────────────────────────────────────
-    
     # -- GEOMETRY EXTRACTION 
     out = utils.process_airfoil_file(bladeFilePath, n_points=1000, n_te=60, d_factor=d_factor)
     xSS, ySS, _, _ = out['ss']
@@ -273,16 +276,24 @@ def main():
     d_factor = d_factor
     
     # --- MESH BL PARAMETERS
-    first_layer_height = 0.01 * sizeCellAirfoil
-    bl_growth = 1.17
-    bl_thickness = 0.03 * pitch
+    #first_layer_height = 0.01 * sizeCellAirfoil
+    #bl_growth = 1.17
+    #bl_thickness = 0.03 * pitch
+    
+    bl = utils.compute_bl_parameters(u1, rho1, mu, axial_chord,
+                                     n_layers    = 25,           # keep in sync with gmsh Field[1].thickness
+                                     y_plus_target = 1.0)
+
+    first_layer_height = bl['first_layer_height']
+    bl_growth          = bl['bl_growth']
+    bl_thickness       = bl['bl_thickness']
     size_LE = 0.1 * sizeCellAirfoil
     dist_LE = 0.01 * axial_chord
     size_TE = 0.1 * sizeCellAirfoil
     dist_TE = 0.01 * axial_chord
 
     # --- REFINEMENT PARAMETERS 
-    VolWAkeIn   = 0.35 * sizeCellFluid
+    VolWAkeIn   = 0.5 * sizeCellFluid
     VolWAkeOut  = sizeCellFluid
     WakeXMin    = 0.1 * axial_chord 
     WakeXMax    = (dist_outlet + 0.5) * axial_chord
@@ -354,9 +365,9 @@ def main():
                         WakeXMin, WakeXMax, WakeYMin, WakeYMax)
     
     mesh_datablade.mesh_datablade()
-    #configSU2_datablade.configSU2_datablade()
-    #configSU2_datablade.runSU2_datablade()
-    #post_processing_datablade.post_processing_datablade()
+    configSU2_datablade.configSU2_datablade()
+    configSU2_datablade.runSU2_datablade()
+    post_processing_datablade.post_processing_datablade()
 
 if __name__ == '__main__':
     main()
