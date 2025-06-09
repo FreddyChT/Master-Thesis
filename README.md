@@ -14,3 +14,8 @@ Blades/
 `DataBladeAnalysis v8.py` now automatically creates a timestamped folder under the
 corresponding `Blades/<bladeName>/results/` directory every time it is run. All
 meshes, configuration files and SU2 results are saved in this run directory.
+
+Each new result folder also contains a `rerun.py` script with all the
+parameters used for that run. Execute it with `--mode rerun` to repeat the full
+simulation or with `--mode replot` to regenerate the plots from the existing
+output files.
