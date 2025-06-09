@@ -5,9 +5,7 @@ from utils import process_airfoil_file
 '''
 bladeFilePath, run_dir, string, bladeName,                           # File management                
 dist_inlet, dist_outlet,                                             # Inlet / outlet definition
-axial_chord, pitch, d_factor,                                        # Geometric parameters
-x15000, y15000, x15001, y15001,                                      # Mesh boundary points
-x15002, y15002, x15003, y15003,           
+axial_chord, pitch, d_factor,                                        # Geometric parameters          
 sizeCellAirfoil, sizeCellFluid,                                      # Grid element sizes
 nBoundaryPoints, nCellAirfoil, nCellPerimeter,                       # Grid no. elements
 first_layer_height, bl_growth, bl_thickness,                         # BL definition
@@ -22,28 +20,6 @@ def mesh_datablade():
     xSS, ySS, _, _ = out['ss']
     xPS, yPS, _, _ = out['ps']
     
-    '''
-    # ── GLOBAL BL THICKNESS & y⁺‑based first‑cell height (uses inlet ρ₂, U₂) ──
-    n_bl_layers = 25                         # how many prism layers you want
-    x_grid      = xSS   # 0 ➔ cₐ arc‑length
-    #bl          = boundary_layer_props(x_grid, rho2, V2, mu2)
-    
-    # --------------------------- BL PARAMETERS CALCUL ---------------------------
-    FIRST_LAYER_HEIGHTxSS = float(bl["y1"].min())     # smallest y₁ ⇒ y⁺ ≤ 1 everywhere
-    BL_THICKNESSxSS      = float(bl["δ"].max())       # thickest layer @ TE
-    BL_RATIOxSS          = (BL_THICKNESSxSS / FIRST_LAYER_HEIGHTxSS) ** (1/(n_bl_layers-1))
-    
-    # ── GLOBAL BL THICKNESS & y⁺‑based first‑cell height (uses inlet ρ₂, U₂) ──                        # how many prism layers you want
-    x_grid      = xPS   # 0 ➔ cₐ arc‑length
-    
-    FIRST_LAYER_HEIGHTxPS = float(bl["y1"].min())     # smallest y₁ ⇒ y⁺ ≤ 1 everywhere
-    BL_THICKNESSxPS      = float(bl["δ"].max())       # thickest layer @ TE
-    BL_RATIOxPS          = (BL_THICKNESSxSS / FIRST_LAYER_HEIGHTxSS) ** (1/(n_bl_layers-1))
-    
-    FIRST_LAYER_HEIGHT = (FIRST_LAYER_HEIGHTxSS + FIRST_LAYER_HEIGHTxPS) / 2
-    BL_THICKNESS      = (BL_THICKNESSxSS + BL_THICKNESSxPS) / 2
-    BL_RATIO          = (BL_RATIOxSS + BL_RATIOxPS) / 2
-    '''
     # --------------------------- BOUNDARY POINTS ---------------------------
     L1x = dist_inlet * axial_chord
     #L1 = L1x / abs(np.cos(alpha1 * np.pi/180))
@@ -212,7 +188,7 @@ def mesh_datablade():
         #  NEW 4 ─ Wake strip refinement via Box field
         # ---------------------------------------------------------------------
         f.write("\nField[7] = Box;\n")
-        f.write(f"Field[7].VIn   = { VolWAkeIn };\n")      # 0.25 background size inside box
+        f.write(f"Field[7].VIn   = { VolWAkeIn };\n")           # background size inside box
         f.write(f"Field[7].VOut  = { VolWAkeOut };\n")          # background size outside
         # box from just upstream of LE (−0.1·c) to outlet (+dist_outlet·c)
         f.write(f"Field[7].XMin  = { WakeXMin };\n")
