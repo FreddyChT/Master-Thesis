@@ -512,6 +512,7 @@ def bl_growth_ratio(n_layers: int, y1: float, delta: float) -> float:
 
 
 # Convenience wrapper that gives everything Gmsh wants
+
 def compute_bl_parameters(U_inf: float,
                           rho: float,
                           mu: float,
@@ -550,44 +551,6 @@ def compute_bl_parameters(U_inf: float,
     return dict(first_layer_height=y1,
                 bl_growth=r,
                 bl_thickness=delta)
-
-
-
-
-
-
-
-def boundary_layer_props(x, rhoFlow, velFlow, muFlow, ReTurb=5e5):
-    """
-    Flat‑plate correlations → deltaBL, theta_mom, Cf, muTao and the y⁺=1 first‑cell height.
-    Input
-      x      : 1‑D arc‑length array [m] from leading edge
-      rhoFlow, vel_flow : freestream density [kg/m³] and velocity [m/s]
-      muFlow     : dynamic viscosity [Pa·s]
-      ReTurb  : transition Re_x – below laminar, above turbulent formulas used
-    """
-    Rex   = rhoFlow * velFlow * x / muFlow
-    
-    deltaBL     = np.empty_like(x)
-    thetaMom      = np.empty_like(x)
-    Cf     = np.empty_like(x)
-    
-    for i in range(len(x)):
-        if Rex[i] <= ReTurb:
-            # --- Laminar Blasius -------------------------------------------------
-            deltaBL[i]  = 5.0   * x[i] / np.sqrt(Rex[i])
-            thetaMom[i]  = 0.664 * x[i] / np.sqrt(Rex[i])
-            Cf[i] = 0.664 / np.sqrt(Rex[i])
-        else:
-            # --- Turbulent 1/7‑power ----------------------------------------------
-            deltaBL[i]  = 0.37  * x[i] / Rex[i]**0.2
-            thetaMom[i]  = 0.037 * x[i] / Rex[i]**0.2
-            Cf[i] = 0.0592 / Rex[i]**0.2
-
-    muTao   = velFlow * np.sqrt(Cf / 2.0)
-    yPlus    = muFlow / (rhoFlow * muTao)          # first‑cell height for yplus = 1
-    
-    return (deltaBL, thetaMom, Cf, muTao, yPlus)
 
 
 # ────────────────────────────────────────────────────────────────────────────────

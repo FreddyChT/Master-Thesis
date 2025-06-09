@@ -140,12 +140,6 @@ def mesh_datablade():
         # --------------------------------------------------------------------- #
         #  NEW 1  ─ Boundary‑Layer field (curved, orthogonal grid lines)        #
         # --------------------------------------------------------------------- #
-        
-        '''
-        first_layer_height  = FIRST_LAYER_HEIGHT            # 1st‑cell height  (m)
-        bl_growth           = BL_RATIO                       # geometric growth
-        bl_thickness        = BL_THICKNESS              # total BL thickness (m)
-        '''
         f.write("\n// --- BOUNDARY‑LAYER FIELD (curved normals) ---------------\n")
         f.write("Field[1] = BoundaryLayer;\n")
         f.write("Field[1].EdgesList   = {1000, 2000};   // SS & PS splines\n")
@@ -153,7 +147,7 @@ def mesh_datablade():
         f.write(f"Field[1].ratio       = {bl_growth};\n")
         f.write(f"Field[1].thickness   = {bl_thickness};\n")
         f.write(f"Field[1].hfar        = {sizeCellFluid};\n")
-        f.write("Field[1].Quads       = 1;              // keep quads after recombine\n")
+        f.write(f"Field[1].Quads       = 1;          // keep quads after recombine\n")
         f.write("BoundaryLayer Field = 1;\n")
         
         # --------------------------------------------------------------------- #

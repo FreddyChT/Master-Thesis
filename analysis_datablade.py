@@ -264,7 +264,7 @@ def main():
     xPS, yPS, _, _ = out['ps']
     
     # --- GENERAL MESH PARAMETERS 
-    sizeCellFluid = 0.02 * axial_chord
+    sizeCellFluid = 0.04 * axial_chord
     sizeCellAirfoil = 0.02 * axial_chord
     nCellAirfoil = 549
     nCellPerimeter = 183
@@ -291,9 +291,9 @@ def main():
     dist_LE = 0.01 * axial_chord
     size_TE = 0.1 * sizeCellAirfoil
     dist_TE = 0.01 * axial_chord
-
+    
     # --- REFINEMENT PARAMETERS 
-    VolWAkeIn   = 0.5 * sizeCellFluid
+    VolWAkeIn   = 0.35 * sizeCellFluid
     VolWAkeOut  = sizeCellFluid
     WakeXMin    = 0.1 * axial_chord 
     WakeXMax    = (dist_outlet + 0.5) * axial_chord
@@ -365,9 +365,9 @@ def main():
                         WakeXMin, WakeXMax, WakeYMin, WakeYMax)
     
     mesh_datablade.mesh_datablade()
-    configSU2_datablade.configSU2_datablade()
-    configSU2_datablade.runSU2_datablade()
-    post_processing_datablade.post_processing_datablade()
+    #configSU2_datablade.configSU2_datablade()
+    #configSU2_datablade.runSU2_datablade()
+    #post_processing_datablade.post_processing_datablade()
 
 if __name__ == '__main__':
     main()
