@@ -58,6 +58,37 @@ def mesh_datablade():
         for pt in bottomPts[1:-1]:
             f.write(f"{pt}, ")
         f.write(f"{TE_ID}}}; \n")
+
+        # ---- Partition airfoil into 4 regions (LE, TE, upper mid, lower mid) ----
+        le_frac = 0.015
+        te_frac = 0.015
+        
+        n_ss = len(xSS)
+        n_le = max(1, int(n_ss * le_frac))
+        n_te = max(1, int(n_ss * te_frac))
+        te_start = n_ss - n_te
+        
+        def write_bspline(cid, ids):
+            f.write(f"BSpline({cid}) = {{{', '.join(map(str, ids))}}};\n")
+
+        # suction side segments
+        ids_ss_le = list(range(0, n_le + 1))
+        ids_ss_mid = list(range(n_le, te_start + 1))
+        ids_ss_te = list(range(te_start, n_ss))
+
+        write_bspline(1100, ids_ss_le)
+        write_bspline(1101, ids_ss_mid)
+        write_bspline(1102, ids_ss_te)
+
+        # pressure side uses same LE/TE points as suction side
+        all_ps = [0] + bottomPts[1:-1] + [TE_ID]
+        ids_ps_le = all_ps[: n_le + 1]
+        ids_ps_mid = all_ps[n_le : te_start + 1]
+        ids_ps_te = all_ps[te_start:]
+
+        write_bspline(2100, ids_ps_le)
+        write_bspline(2101, ids_ps_mid)
+        write_bspline(2102, ids_ps_te)
         
         # Outer boundary points (IDs unchanged)
         x15000 = -L1x
@@ -121,7 +152,7 @@ def mesh_datablade():
         
         # ------------------ CURVE LOOPS ------------------
         f.write("\n// Curve Loop airfoil & boundary edge\n")
-        f.write("Curve Loop(10) = {1000, -2000};\n")
+        f.write("Curve Loop(10) = {1100, 1101, 1102, -2102, -2101, -2100};\n")
         f.write("Curve Loop(50) = {150, 151, -152, -153};\n\n")
         
         # ------------------ PLANE SURFACES ------------------
@@ -131,8 +162,12 @@ def mesh_datablade():
         # ------------------ TRANSFINITE MESH DEFINITIONS ------------------
         f.write("\n// Transfinite definitions for connector lines\n")
         # Airfoil and Boundary layer curves
-        f.write(f"Transfinite Curve {{1000}} = {nCellAirfoil} Using Progression 1; \n")
-        f.write(f"Transfinite Curve {{2000}} = {nCellAirfoil} Using Progression 1; \n")
+        f.write(f"Transfinite Curve {{1100}} = {nCellAirfoil*(4*le_frac)} Using Progression 1; \n")
+        f.write(f"Transfinite Curve {{1101}} = {nCellAirfoil*(1-le_frac-te_frac)} Using Progression 1; \n")
+        f.write(f"Transfinite Curve {{1102}} = {nCellAirfoil*(4*te_frac)} Using Progression 1; \n")
+        f.write(f"Transfinite Curve {{2100}} = {nCellAirfoil*(4*le_frac)} Using Progression 1; \n")
+        f.write(f"Transfinite Curve {{2101}} = {nCellAirfoil*(1-le_frac-te_frac)} Using Progression 1; \n")
+        f.write(f"Transfinite Curve {{2102}} = {nCellAirfoil*(4*te_frac)} Using Progression 1; \n")
 
         # Airfoil and Mesh boundary curves
         f.write(f"Transfinite Curve {{10}} = {nCellPerimeter} Using Progression 1; \n")
@@ -143,7 +178,7 @@ def mesh_datablade():
         # --------------------------------------------------------------------- #
         f.write("\n// --- BOUNDARY‑LAYER FIELD (curved normals) ---------------\n")
         f.write("Field[1] = BoundaryLayer;\n")
-        f.write("Field[1].EdgesList   = {1000, 2000};   // SS & PS splines\n")
+        f.write("Field[1].EdgesList   = {1100, 1101, 1102, 2102, 2101, 2100};   // SS & PS splines\n")
         f.write(f"Field[1].hwall_n     = {first_layer_height};\n")
         f.write(f"Field[1].ratio       = {bl_growth};\n")
         f.write(f"Field[1].thickness   = {bl_thickness};\n")
@@ -212,7 +247,7 @@ def mesh_datablade():
         f.write('Physical Curve("symmetricWallsBOTTOM", 18002) = {150};\n')
         f.write('Physical Curve("symmetricWallsTOP",    18003) = {152};\n')
         f.write('Physical Curve("outlet", 18004) = {151};\n')
-        f.write('Physical Curve("blade1", 18005) = {2000, 1000};\n')
+        f.write('Physical Curve("blade1", 18005) = {1100, 1101, 1102, 2102, 2101, 2100};\n')
         f.write('Physical Surface("fluid", 18008) = {5};\n') 
         
         

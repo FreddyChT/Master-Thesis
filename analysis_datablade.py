@@ -367,9 +367,9 @@ def main():
                             WakeXMin, WakeXMax, WakeYMin, WakeYMax)
         
         mesh_datablade.mesh_datablade()
-        configSU2_datablade.configSU2_datablade()
-        configSU2_datablade.runSU2_datablade()
-        post_processing_datablade.post_processing_datablade()
+        #configSU2_datablade.configSU2_datablade()
+        #configSU2_datablade.runSU2_datablade()
+        #post_processing_datablade.post_processing_datablade()
 
 if __name__ == '__main__':
     main()
