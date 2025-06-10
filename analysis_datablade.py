@@ -5,7 +5,7 @@ Created on Thu Feb 13 17:54:39 2025
 @author: Freddy Chica
 @co-author: Francesco Porta
 
-Notice: GPT-4o was heavily used for the elaboration of this script
+Disclaimer: GPT-o3 & Codex were heavily used for the elaboration of this script
 """
 
 import argparse
@@ -100,7 +100,7 @@ WakeYMin = {WakeYMin}
 WakeYMax = {WakeYMax}
 
 run_dir = Path(__file__).resolve().parent
-base_dir = Path({str(base_dir)!r})
+base_dir = Path(__file__).resolve().parents[2]
 blade_dir = base_dir / 'Blades' / bladeName
 isesFilePath = blade_dir / f'ises.{string}'
 bladeFilePath = blade_dir / f'{bladeName}.{string}'
@@ -367,9 +367,9 @@ def main():
                             WakeXMin, WakeXMax, WakeYMin, WakeYMax)
         
         mesh_datablade.mesh_datablade()
-        #configSU2_datablade.configSU2_datablade()
-        #configSU2_datablade.runSU2_datablade()
-        #post_processing_datablade.post_processing_datablade()
+        configSU2_datablade.configSU2_datablade()
+        configSU2_datablade.runSU2_datablade()
+        post_processing_datablade.post_processing_datablade()
 
 if __name__ == '__main__':
     main()

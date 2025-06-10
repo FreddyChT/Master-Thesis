@@ -53,7 +53,7 @@ WakeYMin = -1.580782
 WakeYMax = 1.580782
 
 run_dir = Path(__file__).resolve().parent
-base_dir = Path('C:\\Users\\fredd\\Documents\\GitHub\\Master-Thesis')
+base_dir = Path(__file__).resolve().parents[2]
 blade_dir = base_dir / 'Blades' / bladeName
 isesFilePath = blade_dir / f'ises.databladeVALIDATION'
 bladeFilePath = blade_dir / f'Blade_1.databladeVALIDATION'
