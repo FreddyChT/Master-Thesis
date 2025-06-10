@@ -124,7 +124,7 @@ MG_DAMP_PROLONGATION    = 0.75                      % Damping factor for the cor
 CONV_RESIDUAL_MINVAL    = -8                        % Can try lower but unnecessary
 CONV_FIELD              = RMS_DENSITY               % Can also try MASSFLOW
 CONV_STARTITER          = 500                       % Original 500
-ITER                    = 6000
+ITER                    = 7000
 
 
 % ------------------------- SCREEN/HISTORY VOLUME OUTPUT --------------------------%
@@ -143,16 +143,16 @@ WRT_FORCES_BREAKDOWN    = NO
 
 % ------------------------- INPUT/OUTPUT FILE INFORMATION --------------------------%
 % INPUTS
-MESH_FILENAME           = cascade2D{string}_{bladeName}.su2
+MESH_FILENAME           = cascade2D_{string}_{bladeName}.su2
 MESH_FORMAT             = SU2
-MESH_OUT_FILENAME       = cascade2D{string}_out_{bladeName}.su2
-SOLUTION_FILENAME       = restart_flow{string}_{bladeName}.dat
+MESH_OUT_FILENAME       = cascade2D_{string}_out_{bladeName}.su2
+SOLUTION_FILENAME       = restart_flow_{string}_{bladeName}.dat
 
 % OUTPUTS
 OUTPUT_FILES            = (RESTART, PARAVIEW, SURFACE_PARAVIEW, CSV, SURFACE_CSV)
 CONV_FILENAME           = history_{string}_{bladeName}
-RESTART_FILENAME        = restart_flow{string}_{bladeName}.dat
-VOLUME_FILENAME         = volume_flow{string}_{bladeName}
+RESTART_FILENAME        = restart_flow_{string}_{bladeName}.dat
+VOLUME_FILENAME         = volume_flow_{string}_{bladeName}
 SURFACE_FILENAME        = surface_flow{string}_{bladeName}
 %GRAD_OBJFUNC_FILENAME  = of_grad{string}_{bladeName}.dat
 

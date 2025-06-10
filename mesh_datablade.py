@@ -31,7 +31,7 @@ def mesh_datablade():
     m1 = np.tan(alpha1*np.pi/180)
     m2 = np.tan(alpha2*np.pi/180)
     
-    geo_file = run_dir / f"cascade2D{string}_{bladeName}.geo"
+    geo_file = run_dir / f"cascade2D_{string}_{bladeName}.geo"
     with open(geo_file, 'w') as f:
         
         # ------------------ AIRFOIL CURVES ------------------
