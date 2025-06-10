@@ -635,16 +635,20 @@ def SU2_organize(df):
     leading_edge, upper_surface, trailing_edge, lower_surface.
     """
     leading_edge  = df.iloc[0:1].copy()      # row 0
-    trailing_edge = df.iloc[1:2].copy()      # row 1
+    leading_ss    = df.iloc[1:2].copy()      # row 1
+    trailing_edge = df.iloc[2:3].copy()      # row 2
+    trailing_ss   = df.iloc[3:4].copy()      # row 3
+    leading_ps    = df.iloc[4:5].copy()      # row 4
+    trailing_ps   = df.iloc[5:6].copy()      # row 5
 
-    geo = df.iloc[2:].copy().reset_index(drop=True)
+    geo = df.iloc[6:].copy().reset_index(drop=True)
     x, y = geo['x'].values, geo['y'].values
 
     # find the largest jump between consecutive points = break TE→LE
     dist = np.hypot(np.diff(x), np.diff(y))
     idx_break = np.argmax(dist) + 1          # first point of pressure surface
-
-    upper_surface  = geo.iloc[:idx_break].copy()           # suction side
+    
+    upper_surface  = geo.iloc[:idx_break].copy()     # suction side
     lower_surface  = geo.iloc[idx_break:].copy()     # pressure, reversed LE→TE
 
     return leading_edge, trailing_edge, upper_surface, lower_surface

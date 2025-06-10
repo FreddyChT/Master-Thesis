@@ -180,8 +180,8 @@ def post_processing_datablade():
     # ─────────────────────────────────────────────────────────────────────────────
     
     SU2_DataPlotting(s_normSS, s_normPS, machSS, machPS,
-                 "Mach Number", string, run_dir, bladeName, 
-                 mirror_PS=False, exp_x=blade_frac, exp_mach=blade_mach)
+                 "Mach Number", string, run_dir, bladeName, mirror_PS=False, 
+                 exp_x=blade_frac, exp_mach=blade_mach)
     
     SU2_DataPlotting(s_normSS, s_normPS, yPlusSS, yPlusPS,
                  "Y Plus", string, run_dir, bladeName, mirror_PS=True)
