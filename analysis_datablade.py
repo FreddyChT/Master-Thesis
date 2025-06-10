@@ -53,6 +53,8 @@ def create_rerun_script(run_dir, bladeName, base_dir,
 
 import argparse
 from pathlib import Path
+import sys
+sys.path.append(str(Path(__file__).resolve().parents[4]))
 import mesh_datablade
 import configSU2_datablade
 import post_processing_datablade
@@ -100,7 +102,7 @@ WakeYMin = {WakeYMin}
 WakeYMax = {WakeYMax}
 
 run_dir = Path(__file__).resolve().parent
-base_dir = Path(__file__).resolve().parents[2]
+base_dir = Path(__file__).resolve().parents[4]
 blade_dir = base_dir / 'Blades' / bladeName
 isesFilePath = blade_dir / f'ises.{string}'
 bladeFilePath = blade_dir / f'{bladeName}.{string}'

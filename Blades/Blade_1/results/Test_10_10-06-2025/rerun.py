@@ -6,6 +6,8 @@
 
 import argparse
 from pathlib import Path
+import sys
+sys.path.append(str(Path(__file__).resolve().parents[4]))
 import mesh_datablade
 import configSU2_datablade
 import post_processing_datablade
@@ -53,7 +55,7 @@ WakeYMin = -1.580782
 WakeYMax = 1.580782
 
 run_dir = Path(__file__).resolve().parent
-base_dir = Path(__file__).resolve().parents[2]
+base_dir = Path(__file__).resolve().parents[4]
 blade_dir = base_dir / 'Blades' / bladeName
 isesFilePath = blade_dir / f'ises.databladeVALIDATION'
 bladeFilePath = blade_dir / f'Blade_1.databladeVALIDATION'
