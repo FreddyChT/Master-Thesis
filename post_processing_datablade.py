@@ -120,10 +120,12 @@ def post_processing_datablade():
     blade_mach      = np.concatenate([ps_mach, ss_mach])
     
     ps_bl, ss_bl = MISES_blDataGather(mises_blFile)
-    cf_ps = -ps_bl['Cf'].values
+    ps_frac_bl = -ps_bl['s'].values
+    ss_frac_bl =  ss_bl['s'].values
+    cf_ps = ps_bl['Cf'].values
     cf_ss = ss_bl['Cf'].values
     cf_exp          = np.concatenate([cf_ps, cf_ss])
-    blade_frac_bl   = np.concatenate([ps_bl, ss_bl])
+    blade_frac_bl   = np.concatenate([ps_frac_bl, ss_frac_bl])
 
     
     # ─────────────────────────────────────────────────────────────────────────────
