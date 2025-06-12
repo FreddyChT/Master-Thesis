@@ -727,19 +727,22 @@ def MISES_blDataGather(file_path):
     Blank lines (or short lines) mark the end of a streamtube.
     Returns lists of lists for each variable:
       - x, y geometry
-      - delta_star, theta, theta_star, shape_factor, Mach
+      - delta_star, theta, theta_star, shape_factor(H), friction_coeff, drag_coeff, Mach
     """
     all_x_values = []
     all_y_values = []
+    all_s_values = []
     all_delta_star = []
     all_theta = []
     all_theta_star = []
     all_shape_factor = []
+    all_friction_coef = []
+    all_drag_coef = []
     all_mach = []
-
+    
     # Temporary arrays for the current streamtube
-    x_tmp, y_tmp = [], []
-    ds_tmp, th_tmp, ts_tmp, sf_tmp, M_tmp = [], [], [], [], []
+    x_tmp, y_tmp, s_tmp = [], [], []
+    ds_tmp, th_tmp, ts_tmp, sf_tmp, cf_tmp, cd_tmp, M_tmp = [], [], [], [], [], [], []
 
     with open(file_path, 'r') as f:
         # Skip header lines
@@ -753,41 +756,53 @@ def MISES_blDataGather(file_path):
                 if x_tmp:
                     all_x_values.append(x_tmp)
                     all_y_values.append(y_tmp)
+                    all_s_values.append(s_tmp)
                     all_delta_star.append(ds_tmp)
                     all_theta.append(th_tmp)
                     all_theta_star.append(ts_tmp)
                     all_shape_factor.append(sf_tmp)
+                    all_friction_coef.append(cf_tmp)
+                    all_drag_coef.append(cd_tmp)
                     all_mach.append(M_tmp)
                 # Reset for next tube
-                x_tmp, y_tmp = [], []
-                ds_tmp, th_tmp, ts_tmp, sf_tmp, M_tmp = [], [], [], [], []
+                x_tmp, y_tmp, s_tmp = [], [], []
+                ds_tmp, th_tmp, ts_tmp, sf_tmp, cf_tmp, cd_tmp, M_tmp = [], [], [], [], [], [], []
                 continue
 
             x_tmp.append(float(tokens[0]))
             y_tmp.append(float(tokens[1]))
+            s_tmp.append(float(tokens[2]))
             ds_tmp.append(float(tokens[5]))
             th_tmp.append(float(tokens[6]))
             ts_tmp.append(float(tokens[7]))
             sf_tmp.append(float(tokens[8]))
+            cf_tmp.append(float(tokens[10]))
+            cd_tmp.append(float(tokens[11]))
             M_tmp.append(float(tokens[13]))
 
     # Catch final tube if no trailing blank line
     if x_tmp:
         all_x_values.append(x_tmp)
         all_y_values.append(y_tmp)
+        all_s_values.append(s_tmp)
         all_delta_star.append(ds_tmp)
         all_theta.append(th_tmp)
         all_theta_star.append(ts_tmp)
         all_shape_factor.append(sf_tmp)
+        all_friction_coef.append(cf_tmp)
+        all_drag_coef.append(cd_tmp)
         all_mach.append(M_tmp)
 
     return (
         all_x_values, 
-        all_y_values, 
+        all_y_values,
+        all_s_values,
         all_delta_star, 
         all_theta, 
         all_theta_star, 
         all_shape_factor, 
+        all_friction_coef,
+        all_drag_coef,
         all_mach
     )
 
@@ -858,6 +873,63 @@ def MISES_fieldDataGather(file_path):
         all_m.append(m_tmp)
 
     return all_x, all_y, all_rho, all_p, all_u, all_v, all_q, all_m
+
+def MISES_machDataGather(file_path):
+    """
+    Reads field data from file_path, skipping the first two header lines.
+    Columns (0,1) => s, M
+    Blank lines separate the data into upper and lower surface.
+    Returns blade_frac, blade_mach
+    """
+    #We extract the MISES surface infromation in lists for upper and lower surfaces
+    with open(file=file_path, mode='r') as f:
+        next(f)
+        _ = f.readline().split()[0]
+        next(f)
+        next(f)
+        lines = f.readlines()
+        upperSurf = []
+        lowerSurf = []
+        endupper  = False
+        # The following code takes into account the machDistribution file and
+        for line in lines:
+            if not endupper:
+                values = line.split()
+                try:
+                    xPos      = np.float64(values[0])
+                    dataValue = np.float64(values[1])
+                    upperSurf.append([xPos, dataValue]) #This saves a list of vectors [x,y]
+                except:
+                    endupper = True
+            else:
+                values = line.split()
+                try:
+                    xPos      = np.float64(values[0])
+                    dataValue = np.float64(values[1])
+                    lowerSurf.append([xPos, dataValue]) #This saves a list of vectors [x,y]
+                except:
+                    pass
+    
+    #We now modify the extracted lists into 2D-arrays
+    upperValues = np.zeros((len(upperSurf),2))
+    for ii, values in enumerate(upperSurf):
+        upperValues[ii, 0] = values[0] #This saves a 2D-array of the list contents in the upper surface
+        upperValues[ii, 1] = values[1] 
+    lowerValues = np.zeros((len(lowerSurf), 2))
+    for ii, values in enumerate(lowerSurf):
+        lowerValues[ii, 0] = values[0] #This saves a 2D-array of the list contents in the lower surface
+        lowerValues[ii, 1] = values[1] 
+    
+    #We partition the arrays for plotting purposes
+    ps_frac    = upperValues[:, 0] #Upper values are pressure side
+    ps_mach    = upperValues[:, 1]
+    ss_frac    = lowerValues[:, 0] #Lower values are suction side
+    ss_mach    = lowerValues[:, 1]
+    
+    blade_frac = np.concatenate([ps_frac, ss_frac])
+    blade_mach = np.concatenate([ps_mach, ss_mach])
+    
+    return(ps_frac, ss_frac, ps_mach, ss_mach,)
 
 def MISES_DataGather(data, xNorm, y, n):
     index_closest_to_zero = np.abs(data - max(data)).argmin() #Finds the index where the pressure value is closest to pmax (argmin used since the abs difference is an array)
