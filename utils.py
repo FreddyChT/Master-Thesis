@@ -686,8 +686,8 @@ def SU2_DataPlotting(
         run_dir,
         bladeName,
         mirror_PS=False,
-        exp_x=None, # optional experimental x array
-        exp_mach=None # optional experimental Mach array
+        exp_s=None, # optional experimental x array
+        exp_data=None # optional experimental Mach array
     ):
     """
     Plots SU2 results in Non-Norm style (direct values) plus
@@ -702,8 +702,8 @@ def SU2_DataPlotting(
     plt.plot(s_ps, dataPS, marker='o', markersize=2, linestyle='-', color='lightblue', label='SU2 (PS)')
 
     # Overlay optional experimental distribution
-    if (exp_x is not None) and (exp_mach is not None):
-        plt.scatter(exp_x, exp_mach, s=20, color='red', label='Mises Data')
+    if (exp_s is not None) and (exp_data is not None):
+        plt.scatter(exp_s, exp_data, s=20, color='red', label='Mises Data')
 
     plt.ylabel(f'{quantity}', size=20)
     plt.tick_params(axis='y', labelcolor='grey')
@@ -722,89 +722,62 @@ def SU2_DataPlotting(
 # ─────────────────────────────────────────────────────────────────────────────
 
 def MISES_blDataGather(file_path):
+    """Parse ``bl`` output from MISES and organize it by surface.
+
+    The file contains three data chunks separated by blank lines.  The first
+    chunk corresponds to the pressure side, the second to the suction side and
+    the third (if present) is ignored.  Each chunk is returned as a ``pandas``
+    ``DataFrame`` with the same column names used for the SU2 surface data.
+
+    The ``s`` (surface fraction) column of each DataFrame is normalised to
+    ``[0, 1]``.
     """
-    Reads boundary-layer data from file_path, skipping the first two header lines.
-    Blank lines (or short lines) mark the end of a streamtube.
-    Returns lists of lists for each variable:
-      - x, y geometry
-      - delta_star, theta, theta_star, shape_factor(H), friction_coeff, drag_coeff, Mach
-    """
-    all_x_values = []
-    all_y_values = []
-    all_s_values = []
-    all_delta_star = []
-    all_theta = []
-    all_theta_star = []
-    all_shape_factor = []
-    all_friction_coef = []
-    all_drag_coef = []
-    all_mach = []
-    
-    # Temporary arrays for the current streamtube
-    x_tmp, y_tmp, s_tmp = [], [], []
-    ds_tmp, th_tmp, ts_tmp, sf_tmp, cf_tmp, cd_tmp, M_tmp = [], [], [], [], [], [], []
 
-    with open(file_path, 'r') as f:
-        # Skip header lines
-        for _ in range(2):
-            next(f, None)
+    column_names = [
+        "x", "y", "s", "b", "Ue/a0", "delta_star", "theta", "theta_star",
+        "H", "Hbar", "Cf", "CD", "Rtheta", "M",
+    ]
 
-        for line in f:
-            tokens = line.split()
-            if len(tokens) < 9:
-                # End of one streamtube
-                if x_tmp:
-                    all_x_values.append(x_tmp)
-                    all_y_values.append(y_tmp)
-                    all_s_values.append(s_tmp)
-                    all_delta_star.append(ds_tmp)
-                    all_theta.append(th_tmp)
-                    all_theta_star.append(ts_tmp)
-                    all_shape_factor.append(sf_tmp)
-                    all_friction_coef.append(cf_tmp)
-                    all_drag_coef.append(cd_tmp)
-                    all_mach.append(M_tmp)
-                # Reset for next tube
-                x_tmp, y_tmp, s_tmp = [], [], []
-                ds_tmp, th_tmp, ts_tmp, sf_tmp, cf_tmp, cd_tmp, M_tmp = [], [], [], [], [], [], []
-                continue
+    # Read file and skip the two header lines
+    with open(file_path, "r") as f:
+        lines = f.readlines()[2:]
 
-            x_tmp.append(float(tokens[0]))
-            y_tmp.append(float(tokens[1]))
-            s_tmp.append(float(tokens[2]))
-            ds_tmp.append(float(tokens[5]))
-            th_tmp.append(float(tokens[6]))
-            ts_tmp.append(float(tokens[7]))
-            sf_tmp.append(float(tokens[8]))
-            cf_tmp.append(float(tokens[10]))
-            cd_tmp.append(float(tokens[11]))
-            M_tmp.append(float(tokens[13]))
+    chunks = []
+    current = []
+    for line in lines:
+        tokens = line.split()
+        if len(tokens) < len(column_names):
+            if current:
+                chunks.append(current)
+                current = []
+            continue
+        try:
+            row = [float(t) for t in tokens[: len(column_names)]]
+        except ValueError:
+            continue
+        current.append(row)
 
-    # Catch final tube if no trailing blank line
-    if x_tmp:
-        all_x_values.append(x_tmp)
-        all_y_values.append(y_tmp)
-        all_s_values.append(s_tmp)
-        all_delta_star.append(ds_tmp)
-        all_theta.append(th_tmp)
-        all_theta_star.append(ts_tmp)
-        all_shape_factor.append(sf_tmp)
-        all_friction_coef.append(cf_tmp)
-        all_drag_coef.append(cd_tmp)
-        all_mach.append(M_tmp)
+    if current:
+        chunks.append(current)
 
-    return (
-        all_x_values, 
-        all_y_values,
-        all_s_values,
-        all_delta_star, 
-        all_theta, 
-        all_theta_star, 
-        all_shape_factor, 
-        all_friction_coef,
-        all_drag_coef,
-        all_mach
-    )
+    # Expect at least pressure and suction side chunks
+    if len(chunks) < 2:
+        raise ValueError(
+            "bl file does not contain the expected pressure and suction data blocks"
+        )
+
+    ps_df = pd.DataFrame(chunks[0], columns=column_names)
+    ss_df = pd.DataFrame(chunks[1], columns=column_names)
+
+    def normalise_surface(df):
+        smin, smax = df["s"].min(), df["s"].max()
+        if smax != smin:
+            df["s"] = (df["s"] - smin) / (smax - smin)
+
+    normalise_surface(ps_df)
+    normalise_surface(ss_df)
+
+    return ps_df, ss_df
 
 def MISES_fieldDataGather(file_path):
     """

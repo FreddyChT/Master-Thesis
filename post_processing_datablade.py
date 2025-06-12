@@ -116,14 +116,15 @@ def post_processing_datablade():
     mises_blFile    = blade_dir / mises_blFile
     
     ps_frac, ss_frac, ps_mach, ss_mach = MISES_machDataGather(mises_machFile)
-    _, _, _, _, _, _, _, cf, _, _ = MISES_blDataGather(mises_blFile)
+    blade_frac_mach = np.concatenate([ps_frac, ss_frac])
+    blade_mach      = np.concatenate([ps_mach, ss_mach])
     
-    
-    blade_frac = np.concatenate([ps_frac, ss_frac])
-    blade_mach = np.concatenate([ps_mach, ss_mach])
-    
-    mises_fieldFile = f"field.{string}"
-    mises_fieldFile = blade_dir / mises_fieldFile
+    ps_bl, ss_bl = MISES_blDataGather(mises_blFile)
+    cf_ps = -ps_bl['Cf'].values
+    cf_ss = ss_bl['Cf'].values
+    cf_exp          = np.concatenate([cf_ps, cf_ss])
+    blade_frac_bl   = np.concatenate([ps_bl, ss_bl])
+
     
     # ─────────────────────────────────────────────────────────────────────────────
     #   RMS VERIFICATION
@@ -146,11 +147,12 @@ def post_processing_datablade():
     
     SU2_DataPlotting(s_normSS, s_normPS, machSS, machPS,
                  "Mach Number", string, run_dir, bladeName, mirror_PS=False, 
-                 exp_x=blade_frac, exp_mach=blade_mach)
+                 exp_s=blade_frac_mach, exp_data=blade_mach)
     
     SU2_DataPlotting(s_normSS, s_normPS, yPlusSS, yPlusPS,
                  "Y Plus", string, run_dir, bladeName, mirror_PS=True)
     
     SU2_DataPlotting(s_normSS, s_normPS, friction_coeffSS, friction_coeffPS,
-                 "Skin Friction Coefficient", string, run_dir, bladeName, mirror_PS=True)
+                 "Skin Friction Coefficient", string, run_dir, bladeName, mirror_PS=True,
+                 exp_s=blade_frac_bl, exp_data=cf_exp)
 
