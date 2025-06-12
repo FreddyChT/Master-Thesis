@@ -107,58 +107,31 @@ def post_processing_datablade():
     #   MISES DATA
     # ─────────────────────────────────────────────────────────────────────────────
     
-    #Again we read the files in the directory
-    resultsFileName = f"machDistribution.{string}"
-    resultsFilePath = blade_dir / resultsFileName
+    #We read the files in the directory
+    mises_machFile  = f"machDistribution.{string}"
+    mises_machFile  = blade_dir / mises_machFile
+    mises_fieldFile = f"field.{string}"
+    mises_fieldFile = blade_dir / mises_fieldFile
+    mises_blFile    = f"bl.{string}"
+    mises_blFile    = blade_dir / mises_blFile
     
-    #We extract the MISES surface infromation in lists for upper and lower surfaces
-    with open(file=resultsFilePath, mode='r') as f:
-        next(f)
-        _ = f.readline().split()[0]
-        next(f)
-        next(f)
-        lines = f.readlines()
-        upperSurf = []
-        lowerSurf = []
-        endupper  = False
-        # The following code takes into account the machDistribution file and
-        for line in lines:
-            if not endupper:
-                values = line.split()
-                try:
-                    xPos      = np.float64(values[0])
-                    dataValue = np.float64(values[1])
-                    upperSurf.append([xPos, dataValue]) #This saves a list of vectors [x,y]
-                except:
-                    endupper = True
-            else:
-                values = line.split()
-                try:
-                    xPos      = np.float64(values[0])
-                    dataValue = np.float64(values[1])
-                    lowerSurf.append([xPos, dataValue]) #This saves a list of vectors [x,y]
-                except:
-                    pass
+    # machDistribution file data extraction
+    ps_frac, ss_frac, ps_mach, ss_mach = MISES_machDataGather(mises_machFile)
+    blade_frac_mach = np.concatenate([ps_frac, ss_frac])
+    blade_mach      = np.concatenate([ps_mach, ss_mach])
     
-    #We now modify the extracted lists into 2D-arrays
-    upperValues = np.zeros((len(upperSurf),2))
-    for ii, values in enumerate(upperSurf):
-        upperValues[ii, 0] = values[0] #This saves a 2D-array of the list contents in the upper surface
-        upperValues[ii, 1] = values[1] 
-    lowerValues = np.zeros((len(lowerSurf), 2))
-    for ii, values in enumerate(lowerSurf):
-        lowerValues[ii, 0] = values[0] #This saves a 2D-array of the list contents in the lower surface
-        lowerValues[ii, 1] = values[1] 
+    # bl file data extraction
+    ps_bl, ss_bl = MISES_blDataGather(mises_blFile)
+    ps_frac_bl = -ps_bl['s'].values
+    ss_frac_bl =  ss_bl['s'].values
+    cf_ps = ps_bl['Cf'].values
+    cf_ss = ss_bl['Cf'].values
+    cf_bl          = np.concatenate([cf_ps, cf_ss])
+    blade_frac_bl   = np.concatenate([ps_frac_bl, ss_frac_bl])
     
-    #We partition the arrays for plotting purposes
-    ps_frac    = upperValues[:, 0] #Upper values are pressure side
-    ps_mach    = upperValues[:, 1]
-    ss_frac    = lowerValues[:, 0] #Lower values are suction side
-    ss_mach    = lowerValues[:, 1]
+    # field file data extraction
     
-    blade_frac = np.concatenate([ps_frac, ss_frac])
-    blade_mach = np.concatenate([ps_mach, ss_mach])
-
+    
     
     # ─────────────────────────────────────────────────────────────────────────────
     #   RMS VERIFICATION
@@ -181,11 +154,12 @@ def post_processing_datablade():
     
     SU2_DataPlotting(s_normSS, s_normPS, machSS, machPS,
                  "Mach Number", string, run_dir, bladeName, mirror_PS=False, 
-                 exp_x=blade_frac, exp_mach=blade_mach)
+                 exp_s=blade_frac_mach, exp_data=blade_mach)
     
     SU2_DataPlotting(s_normSS, s_normPS, yPlusSS, yPlusPS,
                  "Y Plus", string, run_dir, bladeName, mirror_PS=True)
     
     SU2_DataPlotting(s_normSS, s_normPS, friction_coeffSS, friction_coeffPS,
-                 "Skin Friction Coefficient", string, run_dir, bladeName, mirror_PS=True)
+                 "Skin Friction Coefficient", string, run_dir, bladeName, mirror_PS=True,
+                 exp_s=blade_frac_bl, exp_data=cf_bl)
 
