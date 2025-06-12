@@ -703,9 +703,9 @@ def SU2_DataPlotting(
 
     # Overlay optional experimental distribution
     if (exp_s is not None) and (exp_data is not None):
-        plt.scatter(exp_s, exp_data, s=20, color='red', label='Mises Data')
+        plt.scatter(exp_s, exp_data, s=5, color='red', label='Mises Data')
 
-    plt.ylabel(f'{quantity}', size=20)
+    plt.ylabel(f'{quantity}', size=15)
     plt.tick_params(axis='y', labelcolor='grey')
     plt.grid(visible=True, color='lightgray', linestyle='--')
     if mirror_PS:

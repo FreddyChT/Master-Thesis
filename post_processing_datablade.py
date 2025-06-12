@@ -115,18 +115,23 @@ def post_processing_datablade():
     mises_blFile    = f"bl.{string}"
     mises_blFile    = blade_dir / mises_blFile
     
+    # machDistribution file data extraction
     ps_frac, ss_frac, ps_mach, ss_mach = MISES_machDataGather(mises_machFile)
     blade_frac_mach = np.concatenate([ps_frac, ss_frac])
     blade_mach      = np.concatenate([ps_mach, ss_mach])
     
+    # bl file data extraction
     ps_bl, ss_bl = MISES_blDataGather(mises_blFile)
     ps_frac_bl = -ps_bl['s'].values
     ss_frac_bl =  ss_bl['s'].values
     cf_ps = ps_bl['Cf'].values
     cf_ss = ss_bl['Cf'].values
-    cf_exp          = np.concatenate([cf_ps, cf_ss])
+    cf_bl          = np.concatenate([cf_ps, cf_ss])
     blade_frac_bl   = np.concatenate([ps_frac_bl, ss_frac_bl])
-
+    
+    # field file data extraction
+    
+    
     
     # ─────────────────────────────────────────────────────────────────────────────
     #   RMS VERIFICATION
@@ -156,5 +161,5 @@ def post_processing_datablade():
     
     SU2_DataPlotting(s_normSS, s_normPS, friction_coeffSS, friction_coeffPS,
                  "Skin Friction Coefficient", string, run_dir, bladeName, mirror_PS=True,
-                 exp_s=blade_frac_bl, exp_data=cf_exp)
+                 exp_s=blade_frac_bl, exp_data=cf_bl)
 
