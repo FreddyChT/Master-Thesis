@@ -37,7 +37,7 @@ FREESTREAM_PRESSURE             = {P01}              % Free-stream static pressu
 FREESTREAM_TEMPERATURE          = {T01}              % Free-stream static temperature
 REYNOLDS_NUMBER                 = {Re}             % Free-stream Reynolds number
 REYNOLDS_LENGTH                 = {axial_chord}     % Normalization length
-FREESTREAM_TURBULENCEINTENSITY  = 0.001 % 0.025{TI2/100}         % (If SST used) freestream turbulence intensity (2% as example)
+FREESTREAM_TURBULENCEINTENSITY  = {TI/100} % 0.001  % (If SST used) freestream turbulence intensity (2% as example)
 FREESTREAM_TURB2LAMVISCRATIO    = 0.1  %10              % (If SST used) ratio of turbulent to laminar viscosity
 %FREESTREAM_NU_FACTOR            = 3                 % (For SA) initial turbulent viscosity ratio (default 3)
 % The above turbulence freestream settings are not all used for SA, but included for completeness.

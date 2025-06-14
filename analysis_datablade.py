@@ -31,11 +31,11 @@ import post_processing_datablade
 BLADEROOT = Path(__file__).resolve().parent
 
 def create_rerun_script(run_dir, bladeName, base_dir,
-                        no_cores, string, string2, fileExtension,
-                        alpha1_deg, alpha2_deg, Re, M1, P21_ratio,
+                        no_cores, string, fileExtension,
+                        alpha1_deg, alpha2_deg, Re, R, gamma, mu, 
                         pitch, d_factor, stagger, axial_chord,
-                        R, gamma, mu, T01, P01, P2,
-                        dist_inlet, dist_outlet, TI2,
+                        T01, T02, T2, P01, P1, M1, P2_P0a, M2, P2, c2, u2, rho2,
+                        dist_inlet, dist_outlet, TI,
                         sizeCellFluid, sizeCellAirfoil,
                         nCellAirfoil, nCellPerimeter, nBoundaryPoints,
                         first_layer_height, bl_growth, bl_thickness,
@@ -59,29 +59,60 @@ import mesh_datablade
 import configSU2_datablade
 import post_processing_datablade
 
+# ─────────────────────────────────────────────────────────────────────────────
+#   INITIALIZATION
+# ─────────────────────────────────────────────────────────────────────────────
 bladeName = {bladeName!r}
 no_cores = {no_cores}
 string = {string!r}
-string2 = {string2!r}
 fileExtension = {fileExtension!r}
+
+# ─────────────────────────────────────────────────────────────────────────────
+#   FILE MANAGEMENT
+# ─────────────────────────────────────────────────────────────────────────────
+run_dir = Path(__file__).resolve().parent
+base_dir = Path(__file__).resolve().parents[4]
+blade_dir = base_dir / 'Blades' / bladeName
+isesFilePath = blade_dir / f'ises.{string}'
+bladeFilePath = blade_dir / f'{bladeName}.{string}'
+outletFilePath = blade_dir / f'outlet.{string}'
+
+# ─────────────────────────────────────────────────────────────────────────────
+#   BLADE GEOMETRY 
+# ─────────────────────────────────────────────────────────────────────────────
 alpha1 = {alpha1_deg}
 alpha2 = {alpha2_deg}
-Re = {Re}
-M1 = {M1}
-P21_ratio = {P21_ratio}
-pitch = {pitch}
 d_factor = {d_factor}
 stagger = {stagger}
 axial_chord = {axial_chord}
+pitch = {pitch}
+
+# ─────────────────────────────────────────────────────────────────────────────
+#   BOUNDARY CONDITIONS 
+# ───────────────────────────────────────────────────────────────────────────── 
 R = {R}
 gamma = {gamma}
 mu = {mu}
 T01 = {T01}
+P1 = {P1}
 P01 = {P01}
+M1 = {M1}
 P2 = {P2}
+P2_P0a = {P2_P0a}
+M2 = {M2}
+T02 = {T02}
+T2 = {T2}
+c2 = {c2}
+u2 = {u2}
+rho2 = {rho2}
+Re = {Re}
+TI = {TI}
+
+# ─────────────────────────────────────────────────────────────────────────────
+#   MESHING
+# ─────────────────────────────────────────────────────────────────────────────
 dist_inlet = {dist_inlet}
 dist_outlet = {dist_outlet}
-TI2 = {TI2}
 sizeCellFluid = {sizeCellFluid}
 sizeCellAirfoil = {sizeCellAirfoil}
 nCellAirfoil = {nCellAirfoil}
@@ -101,18 +132,10 @@ WakeXMax = {WakeXMax}
 WakeYMin = {WakeYMin}
 WakeYMax = {WakeYMax}
 
-run_dir = Path(__file__).resolve().parent
-base_dir = Path(__file__).resolve().parents[4]
-blade_dir = base_dir / 'Blades' / bladeName
-isesFilePath = blade_dir / f'ises.{string}'
-bladeFilePath = blade_dir / f'{bladeName}.{string}'
-outletFilePath = blade_dir / f'outlet.{string}'
-
 for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
     mod.bladeName = bladeName
     mod.no_cores = no_cores
     mod.string = string
-    mod.string2 = string2
     mod.fileExtension = fileExtension
     mod.base_dir = base_dir
     mod.blade_dir = blade_dir
@@ -120,24 +143,34 @@ for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
     mod.isesFilePath = isesFilePath
     mod.bladeFilePath = bladeFilePath
     mod.outletFilePath = outletFilePath
+    
     mod.alpha1 = alpha1
     mod.alpha2 = alpha2
-    mod.Re = Re
-    mod.M1 = M1
-    mod.P21_ratio = P21_ratio
-    mod.pitch = pitch
     mod.d_factor = d_factor
     mod.stagger = stagger
     mod.axial_chord = axial_chord
+    mod.pitch = pitch
+    
     mod.R = R
     mod.gamma = gamma
     mod.mu = mu
     mod.T01 = T01
+    mod.P1 = P1
     mod.P01 = P01
+    mod.M1 = M1
     mod.P2 = P2
+    mod.P2_P0a = P2_P0a
+    mod.M2 = M2
+    mod.T02 = T02
+    mod.T2 = T2
+    mod.c2 = c2
+    mod.u2 = u2
+    mod.rho2 = rho2
+    mod.Re = Re
+    mod.TI = TI
+    
     mod.dist_inlet = dist_inlet
     mod.dist_outlet = dist_outlet
-    mod.TI2 = TI2
     mod.sizeCellFluid = sizeCellFluid
     mod.sizeCellAirfoil = sizeCellAirfoil
     mod.nCellAirfoil = nCellAirfoil
@@ -187,7 +220,7 @@ def main():
     
     # --- USER INPUTS 
     parser = argparse.ArgumentParser(description="Run blade analysis")
-    parser.add_argument('--blade', default='Blade_3', help='Blade name')
+    parser.add_argument('--blade', default='Blade_1', help='Blade name')
     parser.add_argument('--blades', nargs='+', help='Process multiple blades')
     parser.add_argument('--no_cores', type=int, default=12, help='MPI cores for SU2')
     parser.add_argument('--suffix', default='databladeVALIDATION', help='File name suffix')
@@ -199,7 +232,6 @@ def main():
     blades = args.blades if args.blades else [args.blade]
     no_cores = args.no_cores
     string = args.suffix
-    string2 = args.opt_tag
     fileExtension = args.file_ext
 
     base_dir = BLADEROOT
@@ -220,9 +252,9 @@ def main():
         outletFilePath = blade_dir / f'outlet.{string}'
         
         # --- BLADE DATA EXTRACTION 
-        alpha1, alpha2, Re = utils.extract_from_ises(isesFilePath)
+        alpha1, alpha2, Re, M2, P2_P0a = utils.extract_from_ises(isesFilePath)
         pitch = utils.extract_from_blade(bladeFilePath)
-        M1, P21_ratio = utils.extract_from_outlet(outletFilePath)
+        #M1, P21_ratio = utils.extract_from_outlet(outletFilePath)
     
         # ─────────────────────────────────────────────────────────────────────────────
         #   BLADE GEOMETRY 
@@ -236,32 +268,33 @@ def main():
     
         stagger = geom['stagger_angle']
         axial_chord = geom['axial_chord']
+        alpha1_deg = int(np.degrees(np.arctan(alpha1)))
+        alpha2_deg = int(np.degrees(np.arctan(alpha2)))
         
         # ─────────────────────────────────────────────────────────────────────────────
         #   BOUNDARY CONDITIONS 
         # ───────────────────────────────────────────────────────────────────────────── 
-        R = 287.058
+        R = 287.058 #[J/kg K]
         gamma = 1.4
-        mu = 1.716e-5
-        
-        T01 = 314.15
-        T1 = T01 / (1 + (gamma - 1)/2 * M1**2)
-        c1 = np.sqrt(gamma * R * T1)
-        u1 = M1 * c1
-        rho1 = mu * Re / (u1 * np.cos(stagger))
-        P1 = rho1 * R * T1
-        P01 = P1 * (1 + (gamma - 1)/2 * M1**2)**(gamma/(gamma - 1))
-        P2 = P21_ratio * P1
-        
-        alpha1_deg = int(np.degrees(np.arctan(alpha1)))
-        alpha2_deg = int(np.degrees(np.arctan(alpha2)))
-        dist_inlet = 1
-        dist_outlet = 2
-        TI2 = 2.2
+        mu = 1.846e-5 #[kg/m s] # Obtained from table online @T=300
+        T01 = 300 #[K]
+        P1, P01 = utils.freestream_total_pressure(Re, M2, axial_chord, T01)
+        M1 = utils.compute_Mx(P01, P1, gamma)
+        P2 = P2_P0a * P01
+        T02 = T01
+        T2 = T02 / (1 + (gamma - 1)/2 * M2**2)
+        c2 = np.sqrt(gamma * R * T2)
+        u2 = M2 * c2
+        rho2 = mu * Re / (u2 * np.cos(stagger))
+        TI = 3.5 #%
         
         # ─────────────────────────────────────────────────────────────────────────────
         #   MESHING
         # ─────────────────────────────────────────────────────────────────────────────
+        #--- INLET & OUTLET
+        dist_inlet = 1
+        dist_outlet = 2
+        
         # -- GEOMETRY EXTRACTION 
         out = utils.process_airfoil_file(bladeFilePath, n_points=1000, n_te=60, d_factor=d_factor)
         xSS, ySS, _, _ = out['ss']
@@ -284,7 +317,7 @@ def main():
         #bl_growth = 1.17
         #bl_thickness = 0.03 * pitch
         
-        bl = utils.compute_bl_parameters(u1, rho1, mu, axial_chord,
+        bl = utils.compute_bl_parameters(u2, rho2, mu, axial_chord,
                                          n_layers    = 25,           # keep in sync with gmsh Field[1].thickness
                                          y_plus_target = 1.0)
     
@@ -310,7 +343,6 @@ def main():
             mod.bladeName = bladeName
             mod.no_cores = no_cores
             mod.string = string
-            mod.string2 = string2
             mod.fileExtension = fileExtension
             mod.base_dir = base_dir
             mod.blade_dir = blade_dir
@@ -318,24 +350,34 @@ def main():
             mod.isesFilePath = isesFilePath
             mod.bladeFilePath = bladeFilePath
             mod.outletFilePath = outletFilePath
-            mod.alpha1 = alpha1_deg
-            mod.alpha2 = alpha2_deg
-            mod.Re = Re
-            mod.M1 = M1
-            mod.P21_ratio = P21_ratio
-            mod.pitch = pitch
+            
+            mod.alpha1 = alpha1
+            mod.alpha2 = alpha2
             mod.d_factor = d_factor
             mod.stagger = stagger
             mod.axial_chord = axial_chord
+            mod.pitch = pitch
+            
             mod.R = R
             mod.gamma = gamma
             mod.mu = mu
             mod.T01 = T01
+            mod.P1 = P1
             mod.P01 = P01
+            mod.M1 = M1
             mod.P2 = P2
+            mod.P2_P0a = P2_P0a
+            mod.M2 = M2
+            mod.T02 = T02
+            mod.T2 = T2
+            mod.c2 = c2
+            mod.u2 = u2
+            mod.rho2 = rho2
+            mod.Re = Re
+            mod.TI = TI
+            
             mod.dist_inlet = dist_inlet
             mod.dist_outlet = dist_outlet
-            mod.TI2 = TI2
             mod.sizeCellFluid = sizeCellFluid
             mod.sizeCellAirfoil = sizeCellAirfoil
             mod.nCellAirfoil = nCellAirfoil
@@ -356,11 +398,11 @@ def main():
             mod.WakeYMax = WakeYMax
             
         create_rerun_script(run_dir, bladeName, base_dir,
-                            no_cores, string, string2, fileExtension,
-                            alpha1_deg, alpha2_deg, Re, M1, P21_ratio,
+                            no_cores, string, fileExtension,
+                            alpha1_deg, alpha2_deg, Re, R, gamma, mu, 
                             pitch, d_factor, stagger, axial_chord,
-                            R, gamma, mu, T01, P01, P2,
-                            dist_inlet, dist_outlet, TI2,
+                            T01, T02, T2, P01, P1, M1, P2_P0a, M2, P2, c2, u2, rho2,
+                            dist_inlet, dist_outlet, TI,
                             sizeCellFluid, sizeCellAirfoil,
                             nCellAirfoil, nCellPerimeter, nBoundaryPoints,
                             first_layer_height, bl_growth, bl_thickness,

@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import shutil
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -29,6 +30,8 @@ def extract_from_ises(file_path):
         line = f.readline()
         tokens = line.split()
         # Extract the third token (index 2) and convert it to a float
+        M2 = np.float64(tokens[0])
+        P2_P0a = np.float64(tokens[1])
         alpha2 = np.float64(tokens[2])
         
         # Skip to next lines to extract Reynolds No.
@@ -41,8 +44,10 @@ def extract_from_ises(file_path):
         print("Inlet flow angle (deg):", int(np.degrees(np.arctan(alpha1))))
         print("Outlet flow angle (deg):", int(np.degrees(np.arctan(alpha2))))
         print("Reynolds number:", reynolds)
+        print("Outlet Mach:", M2)
+        print("Outlet Pressure Ratio:", P2_P0a)
         
-    return alpha1, alpha2, reynolds
+    return alpha1, alpha2, Re, M2, P2_P0a
 
 def extract_from_blade(file_path):
     #Opens the given file, skips header lines, and extracts the first numerical value from the next line.
@@ -617,6 +622,32 @@ def compute_Spec_Dissipation(k, ILS):
     C_mu = 0.09
     omega = C_mu**(3/4) * k**(1/2)/ILS
     return omega
+
+def freestream_total_pressure(Re, M, L, T,
+                              mu=1.8464e-5,   # dynamic viscosity of air at ~300 K [kg m-1 s-1]
+                              gamma=1.4,      # ratio of specific heats for air
+                              R=287.058):     # gas constant for air [J kg-1 K-1]
+    """
+    Returns (p_static, p_total) in Pa.
+    """
+    a = np.sqrt(gamma * R * T)                 # speed of sound
+    rho = Re * mu / (M * L * a)                  # density from Re definition
+    p_static = rho * R * T                       # ideal-gas static pressure
+    pressure_ratio = (1 + 0.5*(gamma-1)*M**2)**(gamma/(gamma-1))
+    p_total = p_static * pressure_ratio          # stagnation pressure
+    return p_static, p_total
+
+
+# --- example with your numbers ---------------------------------------------
+Re = 6.0e5      # Reynolds number
+M  = 0.5        # Mach number
+L  = 0.20       # chord length [m] – change to your model’s chord
+T  = 288.0      # static temp [K] – change to test temperature
+
+p_static, p_total = freestream_total_pressure(Re, M, L, T)
+
+print(f"Static pressure : {p_static/1000:.2f} kPa")
+print(f"Total pressure  : {p_total/1000:.2f} kPa")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
