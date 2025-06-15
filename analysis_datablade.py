@@ -144,8 +144,8 @@ for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
     mod.bladeFilePath = bladeFilePath
     mod.outletFilePath = outletFilePath
     
-    mod.alpha1 = alpha1
-    mod.alpha2 = alpha2
+    mod.alpha1 = alpha1_deg
+    mod.alpha2 = alpha2_deg
     mod.d_factor = d_factor
     mod.stagger = stagger
     mod.axial_chord = axial_chord
@@ -336,7 +336,6 @@ def main():
         WakeXMax    = (dist_outlet + 0.5) * axial_chord
         WakeYMin    = -2 * pitch
         WakeYMax    =  2 * pitch
-    
 
         # expose variables to modules
         for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
@@ -351,8 +350,8 @@ def main():
             mod.bladeFilePath = bladeFilePath
             mod.outletFilePath = outletFilePath
             
-            mod.alpha1 = alpha1
-            mod.alpha2 = alpha2
+            mod.alpha1 = alpha1_deg
+            mod.alpha2 = alpha2_deg
             mod.d_factor = d_factor
             mod.stagger = stagger
             mod.axial_chord = axial_chord

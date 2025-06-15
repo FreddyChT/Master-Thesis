@@ -47,7 +47,7 @@ def extract_from_ises(file_path):
         print("Outlet Mach:", M2)
         print("Outlet Pressure Ratio:", P2_P0a)
         
-    return alpha1, alpha2, Re, M2, P2_P0a
+    return alpha1, alpha2, reynolds, M2, P2_P0a
 
 def extract_from_blade(file_path):
     #Opens the given file, skips header lines, and extracts the first numerical value from the next line.
