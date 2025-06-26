@@ -5,11 +5,27 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline
 from scipy.signal import savgol_filter
+from pathlib import Path
 from OCC.Core.TColgp import TColgp_Array1OfPnt
 from OCC.Core.TColStd import TColStd_Array1OfReal, TColStd_Array1OfInteger
 from OCC.Core.Geom import Geom_BSplineCurve
 from OCC.Core.gp import gp_Pnt
 from math import log10, sqrt
+
+# ──────────────────────────────────────────────────────────────────────────────
+# File Validation Helper
+# ──────────────────────────────────────────────────────────────────────────────
+
+def file_nonempty(path: Path) -> bool:
+    """Return ``True`` if *path* exists and has a non-zero size."""
+    p = Path(path)
+    try:
+        if p.is_file() and p.stat().st_size > 0:
+            return True
+    except OSError:
+        pass
+    print(f"[WARNING] Missing or empty file: {p}")
+    return False
 
 # ────────────────────────────────────────────────────────────────────────────────
 # File reading and extraction
@@ -764,6 +780,10 @@ def MISES_blDataGather(file_path):
     ``[0, 1]``.
     """
 
+    file_path = Path(file_path)
+    if not file_nonempty(file_path):
+        return pd.DataFrame(), pd.DataFrame()
+
     column_names = [
         "x", "y", "s", "b", "Ue/a0", "delta_star", "theta", "theta_star",
         "H", "Hbar", "Cf", "CD", "Rtheta", "M",
@@ -817,6 +837,10 @@ def MISES_fieldDataGather(file_path):
     Blank lines separate the data into streamtubes.
     Returns all_x, all_y, all_rho, all_p, all_u, all_v, all_q, all_m
     """
+    file_path = Path(file_path)
+    if not file_nonempty(file_path):
+        return [], [], [], [], [], [], [], []
+
     all_x  = []
     all_y  = []
     all_rho= []
@@ -885,6 +909,10 @@ def MISES_machDataGather(file_path):
     Blank lines separate the data into upper and lower surface.
     Returns blade_frac, blade_mach
     """
+    file_path = Path(file_path)
+    if not file_nonempty(file_path):
+        return np.array([]), np.array([]), np.array([]), np.array([])
+
     #We extract the MISES surface infromation in lists for upper and lower surfaces
     with open(file=file_path, mode='r') as f:
         next(f)

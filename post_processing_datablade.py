@@ -116,18 +116,28 @@ def post_processing_datablade():
     mises_blFile    = blade_dir / mises_blFile
     
     # machDistribution file data extraction
-    ps_frac, ss_frac, ps_mach, ss_mach = MISES_machDataGather(mises_machFile)
-    blade_frac_mach = np.concatenate([ps_frac, ss_frac])
-    blade_mach      = np.concatenate([ps_mach, ss_mach])
+    if file_nonempty(mises_machFile):
+        ps_frac, ss_frac, ps_mach, ss_mach = MISES_machDataGather(mises_machFile)
+        blade_frac_mach = np.concatenate([ps_frac, ss_frac])
+        blade_mach      = np.concatenate([ps_mach, ss_mach])
+    else:
+        print("[INFO] No MISES mach data found; plotting SU2 results only")
+        blade_frac_mach = None
+        blade_mach = None
     
     # bl file data extraction
-    ps_bl, ss_bl = MISES_blDataGather(mises_blFile)
-    ps_frac_bl = -ps_bl['s'].values
-    ss_frac_bl =  ss_bl['s'].values
-    cf_ps = ps_bl['Cf'].values
-    cf_ss = ss_bl['Cf'].values
-    cf_bl          = np.concatenate([cf_ps, cf_ss])
-    blade_frac_bl   = np.concatenate([ps_frac_bl, ss_frac_bl])
+    if file_nonempty(mises_blFile):
+        ps_bl, ss_bl = MISES_blDataGather(mises_blFile)
+        ps_frac_bl = -ps_bl['s'].values
+        ss_frac_bl =  ss_bl['s'].values
+        cf_ps = ps_bl['Cf'].values
+        cf_ss = ss_bl['Cf'].values
+        cf_bl        = np.concatenate([cf_ps, cf_ss])
+        blade_frac_bl = np.concatenate([ps_frac_bl, ss_frac_bl])
+    else:
+        print("[INFO] No MISES boundary layer data found; plotting SU2 results only")
+        cf_bl = None
+        blade_frac_bl = None
     
     # field file data extraction
     
@@ -136,16 +146,17 @@ def post_processing_datablade():
     #   RMS VERIFICATION
     # ─────────────────────────────────────────────────────────────────────────────
     
-    # --------- Linear‑interp SU2 onto those fractions 
-    su2_ss = np.interp(ss_frac, s_normSS, machSS)
-    su2_ps = np.interp(ps_frac, s_normPS, machPS)
-    
-    # --------- Combined RMS (%)  
-    rel_err_ss = (ss_mach - su2_ss) / su2_ss
-    rel_err_ps = (ps_mach - su2_ps) / su2_ps
-    rms_pct = np.sqrt(np.mean(np.concatenate([rel_err_ss**2, rel_err_ps**2]))) * 100
-    
-    print(f"\nCombined RMS error = {rms_pct:.2f}%")
+    if blade_frac_mach is not None:
+       # --------- Linear‑interp SU2 onto those fractions
+       su2_ss = np.interp(ss_frac, s_normSS, machSS)
+       su2_ps = np.interp(ps_frac, s_normPS, machPS)
+
+       # --------- Combined RMS (%)
+       rel_err_ss = (ss_mach - su2_ss) / su2_ss
+       rel_err_ps = (ps_mach - su2_ps) / su2_ps
+       rms_pct = np.sqrt(np.mean(np.concatenate([rel_err_ss**2, rel_err_ps**2]))) * 100
+
+       print(f"\nCombined RMS error = {rms_pct:.2f}%")
     
     # ─────────────────────────────────────────────────────────────────────────────
     #   PLOTTING
