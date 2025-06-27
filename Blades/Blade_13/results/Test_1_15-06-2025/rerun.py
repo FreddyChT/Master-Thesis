@@ -33,8 +33,8 @@ outletFilePath = blade_dir / f'outlet.databladeVALIDATION'
 # ─────────────────────────────────────────────────────────────────────────────
 #   BLADE GEOMETRY 
 # ─────────────────────────────────────────────────────────────────────────────
-alpha1 = -50
-alpha2 = 69
+alpha1_deg = -50
+alpha2_deg = 69
 d_factor = 0.2
 stagger = 0.5626423785746889
 axial_chord = 1.001102807940379

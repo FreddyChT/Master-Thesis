@@ -33,7 +33,7 @@ BLADEROOT = Path(__file__).resolve().parent
 def create_rerun_script(run_dir, bladeName, base_dir,
                         no_cores, string, fileExtension,
                         alpha1_deg, alpha2_deg, Re, R, gamma, mu, 
-                        pitch, d_factor, stagger, axial_chord,
+                        pitch, d_factor, stagger, axial_chord, chord, pitch2chord,
                         T01, T02, T2, P01, P1, M1, P2_P0a, M2, P2, c2, u2, rho2,
                         dist_inlet, dist_outlet, TI,
                         sizeCellFluid, sizeCellAirfoil,
@@ -80,12 +80,14 @@ outletFilePath = blade_dir / f'outlet.{string}'
 # ─────────────────────────────────────────────────────────────────────────────
 #   BLADE GEOMETRY 
 # ─────────────────────────────────────────────────────────────────────────────
-alpha1 = {alpha1_deg}
-alpha2 = {alpha2_deg}
+alpha1_deg = {alpha1_deg}
+alpha2_deg = {alpha2_deg}
 d_factor = {d_factor}
 stagger = {stagger}
 axial_chord = {axial_chord}
+chord = {chord}
 pitch = {pitch}
+pitch2chord = {pitch2chord}
 
 # ─────────────────────────────────────────────────────────────────────────────
 #   BOUNDARY CONDITIONS 
@@ -149,7 +151,9 @@ for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
     mod.d_factor = d_factor
     mod.stagger = stagger
     mod.axial_chord = axial_chord
+    mod.chord = chord
     mod.pitch = pitch
+    mod.pitch2chord = pitch2chord
     
     mod.R = R
     mod.gamma = gamma
@@ -220,7 +224,7 @@ def main():
     
     # --- USER INPUTS 
     parser = argparse.ArgumentParser(description="Run blade analysis")
-    parser.add_argument('--blade', default='Blade_4', help='Blade name')
+    parser.add_argument('--blade', default='Blade_1', help='Blade name')
     parser.add_argument('--blades', nargs='+', help='Process multiple blades')
     parser.add_argument('--no_cores', type=int, default=12, help='MPI cores for SU2')
     parser.add_argument('--suffix', default='databladeVALIDATION', help='File name suffix')
@@ -266,8 +270,10 @@ def main():
         print(f"Updated d_factor = {d_factor:.3f}")
         geom = utils.compute_geometry(bladeFilePath, pitch=pitch, d_factor_guess=d_factor)
     
-        stagger = geom['stagger_angle']
+        stagger = np.degrees(geom['stagger_angle'])
         axial_chord = geom['axial_chord']
+        chord = geom['chord_length']
+        pitch2chord = pitch / chord
         alpha1_deg = int(np.degrees(np.arctan(alpha1)))
         alpha2_deg = int(np.degrees(np.arctan(alpha2)))
         
@@ -285,7 +291,7 @@ def main():
         T2 = T02 / (1 + (gamma - 1)/2 * M2**2)
         c2 = np.sqrt(gamma * R * T2)
         u2 = M2 * c2
-        rho2 = mu * Re / (u2 * np.cos(stagger))
+        rho2 = mu * Re / (u2 * np.cos(np.radians(stagger)))
         TI = 3.5 #%
         
         # ─────────────────────────────────────────────────────────────────────────────
@@ -334,8 +340,8 @@ def main():
         VolWAkeOut  = sizeCellFluid
         WakeXMin    = 0.1 * axial_chord 
         WakeXMax    = (dist_outlet + 0.5) * axial_chord
-        WakeYMin    = -2 * pitch
-        WakeYMax    =  2 * pitch
+        WakeYMin    = -5 * pitch
+        WakeYMax    =  5 * pitch
 
         # expose variables to modules
         for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
@@ -355,7 +361,9 @@ def main():
             mod.d_factor = d_factor
             mod.stagger = stagger
             mod.axial_chord = axial_chord
+            mod.chord = chord
             mod.pitch = pitch
+            mod.pitch2chord = pitch2chord
             
             mod.R = R
             mod.gamma = gamma
@@ -399,7 +407,7 @@ def main():
         create_rerun_script(run_dir, bladeName, base_dir,
                             no_cores, string, fileExtension,
                             alpha1_deg, alpha2_deg, Re, R, gamma, mu, 
-                            pitch, d_factor, stagger, axial_chord,
+                            pitch, d_factor, stagger, axial_chord, chord, pitch2chord,
                             T01, T02, T2, P01, P1, M1, P2_P0a, M2, P2, c2, u2, rho2,
                             dist_inlet, dist_outlet, TI,
                             sizeCellFluid, sizeCellAirfoil,

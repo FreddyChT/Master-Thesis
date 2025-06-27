@@ -25,7 +25,7 @@ def configSU2_datablade():
 SOLVER                  = RANS
 KIND_TURB_MODEL         = SA
 SA_OPTIONS              = BCM
-KIND_TRANS_MODEL        = NONE
+KIND_TRANS_MODEL        = NONE                        % NONE or LM
 MATH_PROBLEM            = DIRECT
 RESTART_SOL             = NO
 
@@ -33,13 +33,13 @@ RESTART_SOL             = NO
 % -------------------- COMPRESSIBLE FREE-STREAM DEFINITION --------------------%
 MACH_NUMBER                     = {M1}              % Inlet Mach number
 AOA                             = {alpha1}          % Midspan cascade aligned with the flow
-FREESTREAM_PRESSURE             = {P01}              % Free-stream static pressure in Pa
-FREESTREAM_TEMPERATURE          = {T01}              % Free-stream static temperature
-REYNOLDS_NUMBER                 = {Re}             % Free-stream Reynolds number
+FREESTREAM_PRESSURE             = {P01}             % Free-stream static pressure in Pa
+FREESTREAM_TEMPERATURE          = {T01}             % Free-stream static temperature
+REYNOLDS_NUMBER                 = {Re}              % Free-stream Reynolds number
 REYNOLDS_LENGTH                 = {axial_chord}     % Normalization length
 FREESTREAM_TURBULENCEINTENSITY  = {TI/100} % 0.001  % (If SST used) freestream turbulence intensity (2% as example)
-FREESTREAM_TURB2LAMVISCRATIO    = 0.1  %10              % (If SST used) ratio of turbulent to laminar viscosity
-%FREESTREAM_NU_FACTOR            = 3                 % (For SA) initial turbulent viscosity ratio (default 3)
+FREESTREAM_TURB2LAMVISCRATIO    = 0.1  %10          % (If SST used) ratio of turbulent to laminar viscosity
+%FREESTREAM_NU_FACTOR            = 3                % (For SA) initial turbulent viscosity ratio (default 3)
 % The above turbulence freestream settings are not all used for SA, but included for completeness.
 
 REF_ORIGIN_MOMENT_X             = 0.0
@@ -71,8 +71,8 @@ MARKER_ANALYZE          = ( inlet, outlet, blade1 )                         % Ma
 MARKER_INLET            = ( inlet, {T01}, {P01}, {np.cos(alpha1 * np.pi / 180)}, {np.sin(alpha1 * np.pi / 180)}, 0)
 MARKER_OUTLET           = ( outlet,  {P2})
 MARKER_PERIODIC         = ( symmetricWallsBOTTOM, symmetricWallsTOP, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, {pitch}, 0.0 )
-%MARKER_INLET_TURBULENT = ( inlet, TI2, nu_factor2 )          %SST Model
-%MARKER_INLET_TURBULENT = ( inlet,  nu_factor2 )                %SA Model
+%MARKER_INLET_TURBULENT = ( inlet, TI2, nu_factor2 )                        %SST Model
+%MARKER_INLET_TURBULENT = ( inlet,  nu_factor2 )                            %SA Model
 
 
 %-------------------------- NUMERICAL METHODS SETTINGS ------------------------%

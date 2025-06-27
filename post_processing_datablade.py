@@ -148,15 +148,15 @@ def post_processing_datablade():
     
     if blade_frac_mach is not None:
        # --------- Linear‑interp SU2 onto those fractions
-       su2_ss = np.interp(ss_frac, s_normSS, machSS)
-       su2_ps = np.interp(ps_frac, s_normPS, machPS)
-
-       # --------- Combined RMS (%)
-       rel_err_ss = (ss_mach - su2_ss) / su2_ss
-       rel_err_ps = (ps_mach - su2_ps) / su2_ps
-       rms_pct = np.sqrt(np.mean(np.concatenate([rel_err_ss**2, rel_err_ps**2]))) * 100
-
-       print(f"\nCombined RMS error = {rms_pct:.2f}%")
+        su2_ss = np.interp(ss_frac, s_normSS, machSS)
+        su2_ps = np.interp(ps_frac, s_normPS, machPS)
+    
+        # --------- Combined RMS
+        diff_ss = su2_ss - ss_mach
+        diff_ps = su2_ps - ps_mach
+        rms = np.sqrt(np.mean(np.concatenate([diff_ss, diff_ps])**2))
+    
+        print(f"\nCombined RMS error = {rms:.4f}")
     
     # ─────────────────────────────────────────────────────────────────────────────
     #   PLOTTING
