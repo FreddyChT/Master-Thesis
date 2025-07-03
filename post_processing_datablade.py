@@ -22,24 +22,32 @@ def post_processing_datablade():
     #plt.plot(hist['Inner_Iter'], hist['     "rms[k]"    '], label='k')                     # TKE
     #plt.plot(hist['Inner_Iter'], hist['     "rms[w]"    '], label='w')
     plt.grid(alpha=0.3);  plt.legend();  plt.xlabel('Iteration')
-    plt.ylabel('RMS residual - Airfoil');  plt.tight_layout();  plt.show()
+    plt.ylabel(f'RMS residual - {bladeName}');
+    plt.savefig(run_dir / f'rms_residual_{string}_{bladeName}.svg', format='svg', bbox_inches='tight')
+    plt.show()
 
     # Linear Solver Tracking
     plt.plot(hist['Inner_Iter'], hist['    "LinSolRes"   '], label='LSRes')                 # Linear Solver Residual
     plt.plot(hist['Inner_Iter'], hist['  "LinSolResTurb" '], label='LSResTurb')             # Linear Solver Residual
     plt.grid(alpha=0.3);  plt.legend();  plt.xlabel('Iteration')
-    plt.ylabel('Linear Solver residual - Airfoil');  plt.tight_layout();  plt.show()
+    plt.ylabel(f'Linear Solver residual - {bladeName}');
+    plt.savefig(run_dir / f'linear_solver_residual_{string}_{bladeName}.svg', format='svg', bbox_inches='tight')
+    plt.show()
 
     # RMS Tracking
     plt.plot(hist['Inner_Iter'], hist['     "Avg CFL"    '], label='CFL')                   # CFL used per iteration
     plt.grid(alpha=0.3);  plt.legend();  plt.xlabel('Iteration')
-    plt.ylabel('Average CFL - Airfoil');  plt.tight_layout();  plt.show()
+    plt.ylabel(f'Average CFL - {bladeName}');
+    plt.savefig(run_dir / f'cfl_{string}_{bladeName}.svg', format='svg', bbox_inches='tight')
+    plt.show()
 
     # Aero Coefficients Tracking
     plt.plot(hist['Inner_Iter'], hist['   "CD(blade1)"   '], label='CD')                    # Drag Coefficient
     plt.plot(hist['Inner_Iter'], hist['   "CL(blade1)"   '], label='CL')                    # Lift Coefficient
     plt.grid(alpha=0.3);  plt.legend();  plt.xlabel('Iteration')
-    plt.ylabel('Aerodynamic Coefficients - Airfoil');  plt.tight_layout();  plt.show()
+    plt.ylabel(f'Aerodynamic Coefficients - {bladeName}');
+    plt.savefig(run_dir / f'aero_coefficients_{string}_{bladeName}.svg', format='svg', bbox_inches='tight')
+    plt.show()
     
     
     # ─────────────────────────────────────────────────────────────────────────────

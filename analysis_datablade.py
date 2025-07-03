@@ -13,7 +13,7 @@ import numpy as np
 import os
 from pathlib import Path
 from datetime import datetime
-
+import sys
 import utils
 import mesh_datablade
 import configSU2_datablade
@@ -221,10 +221,13 @@ def main():
     # ─────────────────────────────────────────────────────────────────────────────
     #   INITIALIZATION
     # ─────────────────────────────────────────────────────────────────────────────
+    #sys.argv = ['analysis_datablade.py', '--blades',
+     #           'Blade_14', 'Blade_15', 'Blade_16', 'Blade_17', 'Blade_18', 'Blade_19', 'Blade_20']
+                #'Blade_21', 'Blade_22', 'Blade_23', 'Blade_24', 'Blade_25', 'Blade_26']
     
     # --- USER INPUTS 
     parser = argparse.ArgumentParser(description="Run blade analysis")
-    parser.add_argument('--blade', default='Blade_1', help='Blade name')
+    parser.add_argument('--blade', default='Blade_15', help='Blade name')
     parser.add_argument('--blades', nargs='+', help='Process multiple blades')
     parser.add_argument('--no_cores', type=int, default=12, help='MPI cores for SU2')
     parser.add_argument('--suffix', default='databladeVALIDATION', help='File name suffix')
@@ -299,7 +302,7 @@ def main():
         # ─────────────────────────────────────────────────────────────────────────────
         #--- INLET & OUTLET
         dist_inlet = 1
-        dist_outlet = 2
+        dist_outlet = 1.5
         
         # -- GEOMETRY EXTRACTION 
         out = utils.process_airfoil_file(bladeFilePath, n_points=1000, n_te=60, d_factor=d_factor)
@@ -326,7 +329,7 @@ def main():
         bl = utils.compute_bl_parameters(u2, rho2, mu, axial_chord,
                                          n_layers    = 25,           # keep in sync with gmsh Field[1].thickness
                                          y_plus_target = 1.0)
-    
+        
         first_layer_height = bl['first_layer_height']
         bl_growth          = bl['bl_growth']
         bl_thickness       = bl['bl_thickness']
@@ -339,7 +342,7 @@ def main():
         VolWAkeIn   = 0.35 * sizeCellFluid
         VolWAkeOut  = sizeCellFluid
         WakeXMin    = 0.1 * axial_chord 
-        WakeXMax    = (dist_outlet + 0.5) * axial_chord
+        WakeXMax    = (dist_outlet + 1) * axial_chord
         WakeYMin    = -5 * pitch
         WakeYMax    =  5 * pitch
 

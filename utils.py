@@ -740,27 +740,24 @@ def SU2_DataPlotting(
     Plots SU2 results in Non-Norm style (direct values) plus
     optional experimental data for direct comparison.
     """
-    fig, ax1 = plt.subplots(figsize=(14, 9))
-
     # Plot SU2 (suction & pressure side)
-    plt.plot(sSSnorm, dataSS, marker='o', markersize=2, linestyle='-', color='darkblue', label='SU2 (SS)')
+    plt.plot(sSSnorm, dataSS, marker='o', markersize=0.5, linestyle='-', color='darkblue', label='SU2 (SS)')
     
     s_ps = -sPSnorm if mirror_PS else sPSnorm
-    plt.plot(s_ps, dataPS, marker='o', markersize=2, linestyle='-', color='lightblue', label='SU2 (PS)')
+    plt.plot(s_ps, dataPS, marker='o', markersize=0.5, linestyle='-', color='lightblue', label='SU2 (PS)')
 
     # Overlay optional experimental distribution
     if (exp_s is not None) and (exp_data is not None):
-        plt.scatter(exp_s, exp_data, s=5, color='red', label='Mises Data')
+        plt.scatter(exp_s, exp_data, s=0.5, color='red', label='Mises Data')
 
-    plt.ylabel(f'{quantity}', size=15)
-    plt.tick_params(axis='y', labelcolor='grey')
-    plt.grid(visible=True, color='lightgray', linestyle='--')
+    plt.ylabel(f'{quantity} - {bladeName}')
+    plt.grid(visible=True, color='lightgray')
     if mirror_PS:
         plt.xlim(-1, 1)       # show full mirror
     else:
         plt.xlim(0, 1)
-    plt.legend(loc='upper left', prop={'size': 20}, edgecolor='k', fancybox=False)
-    plt.savefig(run_dir / f"non-normalized{quantity}_{string}_{bladeName}.svg", format='svg', bbox_inches='tight')
+    plt.legend(loc='upper left', edgecolor='k', fancybox=False)
+    plt.savefig(run_dir / f"non-normalized_{quantity}_{string}_{bladeName}.svg", format='svg', bbox_inches='tight')
     plt.show()
 
 

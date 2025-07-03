@@ -1,4 +1,5 @@
 import os
+import subprocess
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -121,7 +122,7 @@ MG_DAMP_PROLONGATION    = 0.75                      % Damping factor for the cor
 
 
 % ------------------------------- SOLVER CONTROL ------------------------------%
-CONV_RESIDUAL_MINVAL    = -8                        % Can try lower but unnecessary
+CONV_RESIDUAL_MINVAL    = -7                        % Can try lower but unnecessary
 CONV_FIELD              = RMS_DENSITY               % Can also try MASSFLOW
 CONV_STARTITER          = 500                       % Original 500
 ITER                    = 7000
@@ -164,6 +165,7 @@ SURFACE_FILENAME        = surface_flow{string}_{bladeName}
 
 def runSU2_datablade():
     # Run SU2 simulation using the config file.
+    print("SU2 Run Initialized!")
     config_file = run_dir / f"cascade2D{string}_{bladeName}.cfg"
     try:
         if os.path.exists(config_file):
@@ -177,9 +179,41 @@ def runSU2_datablade():
         # Change to the directory where the config file is located
         os.chdir(run_dir)
         
-        # Run SU2 from the config directory
-        os.system(f'mpiexec -n {no_cores} SU2_CFD "{config_file}"')
+        # Run SU2 from the config directory and capture output
+        log_file = run_dir / "su2.log"
+        with open(log_file, "w") as logf:
+            subprocess.run(
+                ["mpiexec", "-n", str(no_cores), "SU2_CFD", str(config_file)],
+                stdout=logf,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
         print("SU2 Run Initialized!")
+
+        # Build summary from log
+        begin_marker = "------------------------------ Begin Solver -----------------------------"
+        exit_markers = [
+            "----------------------------- Solver Exit -------------------------------",
+            "------------------------------ Error Exit -------------------------------",
+        ]
+        with open(log_file, "r") as logf:
+            log_lines = logf.readlines()
+
+        begin_idx = next((i for i, l in enumerate(log_lines) if begin_marker in l), len(log_lines))
+
+        exit_idx = len(log_lines)
+        for marker in exit_markers:
+            found = next((i for i, l in enumerate(log_lines) if marker in l), None)
+            if found is not None:
+                exit_idx = found
+                break
+
+        summary_lines = log_lines[:begin_idx]
+        summary_lines += log_lines[max(0, exit_idx - 5):]
+
+        summary_file = run_dir / "run_summary.txt"
+        with open(summary_file, "w") as f:
+            f.writelines(summary_lines)
     except Exception as e:
         print("Error", e)
     finally:
