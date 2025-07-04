@@ -83,7 +83,9 @@ def post_processing_datablade():
     s_normSS            = surface_fraction(xSS,ySS)
     pressureSS          = dataSS['Pressure'].values
     pressure_coeffSS    = dataSS['Pressure_Coefficient'].values
-    friction_coeffSS    = dataSS['Skin_Friction_Coefficient_x'].values
+    friction_coeffSSx   = dataSS['Skin_Friction_Coefficient_x'].values
+    friction_coeffSSy   = dataSS['Skin_Friction_Coefficient_y'].values
+    friction_coeffSS    = np.sqrt(friction_coeffSSx**2 + friction_coeffSSy**2)
     yPlusSS             = dataSS['Y_Plus'].values
     
     temperatureSS       = dataSS['Temperature'].values
@@ -100,7 +102,9 @@ def post_processing_datablade():
     s_normPS_mirr       = -s_normPS
     pressurePS          = dataPS['Pressure'].values
     pressure_coeffPS    = dataPS['Pressure_Coefficient'].values
-    friction_coeffPS    = dataPS['Skin_Friction_Coefficient_x'].values
+    friction_coeffPSx   = dataPS['Skin_Friction_Coefficient_x'].values
+    friction_coeffPSy   = dataPS['Skin_Friction_Coefficient_y'].values
+    friction_coeffPS    = np.sqrt(friction_coeffPSx**2 + friction_coeffPSy**2)
     yPlusPS             = dataPS['Y_Plus'].values
     
     temperaturePS       = dataPS['Temperature'].values

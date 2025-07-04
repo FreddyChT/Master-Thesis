@@ -35,5 +35,21 @@ Once the bulk option is implemented, multiple blades can be processed in one com
 ```
 python analysis_datablade.py --blades Blade_1 Blade_2 Blade_3
 ```
-
 A separate results directory and `rerun.py` file will be created for each specified blade.
+## Generating run reports
+
+Run `report_datablade.py` to collect information from previous SU2 runs. The
+script opens a small window requesting the date string (e.g. `03-07-2025`) and
+the test number to inspect. It then scans every
+`Blades/*/results/Test_<num>_<date>` directory and reads `su2.log` (or
+`run_summary.txt`). Only the important mesh quality lines and the final part of
+the Performance Summary (from `Simulation totals` to `Restart Aggr`) are copied
+along with mesh size, timing and convergence information.
+
+All outputs are written to `reports/<date>_Test_<num>/` next to the script. This
+folder contains a text summary named `<date>_Test_<num>_report.txt` where each
+blade section is separated by a divider line, plus bar plots of convergence
+time, iteration count, mesh size and mesh quality metrics (minimum
+orthogonality angle, maximum CV face area aspect ratio and maximum CV
+sub-volume ratio). Blade names on the plots are rotated vertically for
+readability and bars are colored red if the simulation failed to converge.

@@ -7,44 +7,44 @@ Generate summary reports for SU2 runs.
 
 Disclaimer: GPT-o3 & Codex were heavily used for the elaboration of this script
 """
+    
 import re
 from pathlib import Path
 import tkinter as tk
 from tkinter import simpledialog
 import matplotlib.pyplot as plt
 
-# Section headers that appear in SU2 logs
-HEADERS = [
-    "Physical Case Definition",
-    "Space Numerical Integration",
-    "Time Numerical Integration",
-    "Convergence Criteria",
-    "Geometry Preprocessing",
-    "Solver Preprocessing",
-    "Performance Summary",
-]
+# Section headers used in SU2 logs
+HEADERS = ["Geometry Preprocessing", "Performance Summary"]
 
 
-def condense(section, max_len=200):
-    """Return a condensed single line from a section."""
-    text = " ".join(line.strip() for line in section if line.strip())
-    if len(text) > max_len:
-        text = text[:max_len] + "..."
-    return text
+class DualEntryDialog(simpledialog.Dialog):
+    """Simple dialog with two text entries."""
+
+    def body(self, master):
+        tk.Label(master, text="Date string (e.g., 03-07-2025)").grid(row=0, column=0, sticky="w")
+        self.date_var = tk.StringVar()
+        self.date_entry = tk.Entry(master, textvariable=self.date_var)
+        self.date_entry.grid(row=0, column=1)
+
+        tk.Label(master, text="Test number (e.g., 7)").grid(row=1, column=0, sticky="w")
+        self.test_var = tk.StringVar()
+        tk.Entry(master, textvariable=self.test_var).grid(row=1, column=1)
+        return self.date_entry
+
+    def apply(self):
+        self.result = (self.date_var.get().strip(), self.test_var.get().strip())
 
 
 def ask_inputs():
-    """Prompt the user for date string and test number."""
+    """Prompt the user for date string and test number in one window."""
     root = tk.Tk()
     root.withdraw()
-    date_str = simpledialog.askstring("Input", "Date string (e.g., 03-07-2025)")
-    if not date_str:
-        raise SystemExit("No date string provided")
-    test_num = simpledialog.askstring("Input", "Test number (e.g., 7)")
-    if not test_num:
-        raise SystemExit("No test number provided")
+    dialog = DualEntryDialog(root, title="Select run")
     root.destroy()
-    return date_str, test_num
+    if not dialog.result or not dialog.result[0] or not dialog.result[1]:
+        raise SystemExit("Inputs required")
+    return dialog.result
 
 
 def find_header(lines, header):
@@ -70,27 +70,58 @@ def get_section(lines, header):
     return lines[start + 1 : end]
 
 
+NUM_RE = r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?"
+
+
 def parse_geometry(section):
+    """Parse mesh statistics and extract quality-related lines."""
     stats = {}
-    patterns = {
-        "grid_points": r"(\d+) grid points before partitioning",
-        "volume_elements": r"(\d+) volume elements before partitioning",
-        "vertices": r"(\d+) vertices including ghost points",
-        "elements": r"(\d+) interior elements including halo cells",
-        "triangles": r"(\d+) triangles",
-        "quads": r"(\d+) quadrilaterals",
-    }
+    lines = []
+    capture_quality = False
+
     for line in section:
-        for key, pat in patterns.items():
-            m = re.search(pat, line)
-            if m:
-                stats[key] = int(m.group(1))
-    return stats
+        # basic mesh size information
+        if m := re.search(rf"(\d+)\s+grid points before partitioning", line, re.I):
+            stats["grid_points"] = int(m.group(1))
+        if m := re.search(rf"(\d+)\s+interior elements including halo cells", line, re.I):
+            stats["elements"] = int(m.group(1))
+
+        # quality metrics
+        if re.search(r"Orthogonality Angle", line, re.I):
+            nums = re.findall(NUM_RE, line)
+            if nums:
+                stats["min_orth_angle"] = float(nums[0])
+        if re.search(r"CV Face Area Aspect Ratio", line, re.I):
+            nums = re.findall(NUM_RE, line)
+            if nums:
+                stats["max_face_area_ar"] = float(nums[-1])
+        if re.search(r"CV Sub-Volume Ratio", line, re.I):
+            nums = re.findall(NUM_RE, line)
+            if nums:
+                stats["max_subvol_ratio"] = float(nums[-1])
+
+        stripped = line.strip()
+        if stripped.startswith("Max K"):
+            lines.append(stripped)
+        if re.search(r"computing mesh quality", line, re.I):
+            capture_quality = True
+            lines.append(stripped)
+            continue
+        if capture_quality:
+            if re.search(r"finding max control volume width", line, re.I):
+                capture_quality = False
+                continue
+            lines.append(stripped)
+
+    return stats, lines
 
 
 def parse_performance(section):
+    """Parse wall time, core count, iteration info and capture summary lines."""
     perf = {}
-    for line in section:
+    start_idx = None
+    end_idx = None
+    for i, line in enumerate(section):
         m = re.search(r"Wall-clock time \(hrs\):\s*([\d.eE+-]+)", line)
         if m:
             perf["wall_hours"] = float(m.group(1))
@@ -100,6 +131,17 @@ def parse_performance(section):
         m = re.search(r"Iteration count:\s*(\d+)", line)
         if m:
             perf["iterations"] = int(m.group(1))
+        if start_idx is None and line.strip().lower().startswith("simulation totals"):
+            start_idx = i
+        if start_idx is not None and end_idx is None and line.strip().lower().startswith("restart aggr"):
+            end_idx = i
+    if start_idx is not None:
+        if end_idx is None:
+            end_idx = len(section)
+        perf_lines = [section[j].strip() for j in range(start_idx, end_idx)]
+    else:
+        perf_lines = [l.strip() for l in section if l.strip()]
+    perf["performance_lines"] = perf_lines
     return perf
 
 
@@ -120,14 +162,14 @@ def parse_last_iteration(lines):
 def parse_log(log_path):
     text = Path(log_path).read_text().splitlines()
     data = {}
-    for header in HEADERS:
-        section = get_section(text, header)
-        if section:
-            data[header] = section
-    if "Geometry Preprocessing" in data:
-        data["mesh"] = parse_geometry(data["Geometry Preprocessing"])
-    if "Performance Summary" in data:
-        data.update(parse_performance(data["Performance Summary"]))
+    geom_sec = get_section(text, "Geometry Preprocessing")
+    if geom_sec:
+        mesh, lines = parse_geometry(geom_sec)
+        data["mesh"] = mesh
+        data["geometry_lines"] = lines
+    perf_sec = get_section(text, "Performance Summary")
+    if perf_sec:
+        data.update(parse_performance(perf_sec))
     iter_count, resid = parse_last_iteration(text)
     data["last_iteration"] = iter_count
     data["final_residual"] = resid
@@ -135,11 +177,35 @@ def parse_log(log_path):
     return data
 
 
+def plot_metric(blades, values, colors, ylabel, title, filename, out_dirs):
+    """Create a bar plot for a given metric and save to all run directories."""
+    fig, ax = plt.subplots(figsize=(max(6, len(blades)), 4))
+    ax.bar(blades, values, color=colors)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    plt.setp(ax.get_xticklabels(), rotation=90)
+    legend_handles = [plt.Rectangle((0, 0), 1, 1, color="blue"),
+                      plt.Rectangle((0, 0), 1, 1, color="red")]
+    ax.legend(legend_handles, ["Converged", "Diverged"], frameon=False)
+    plt.tight_layout()
+    for d in out_dirs:
+        fig.savefig(d / filename)
+    plt.show()
+    plt.close(fig)
+
+
 def main():
     date_str, test_num = ask_inputs()
     base = Path(__file__).resolve().parent
     blades_root = base / "Blades"
+    reports_dir = base / "reports"
+    reports_dir.mkdir(exist_ok=True)
+
+    run_reports_dir = reports_dir / f"{date_str}_Test_{test_num}"
+    run_reports_dir.mkdir(exist_ok=True)
+
     summary = []
+    report_entries = []
 
     for blade_dir in sorted(blades_root.iterdir()):
         if not blade_dir.is_dir():
@@ -156,10 +222,15 @@ def main():
         data["blade"] = blade_dir.name
         data["run_dir"] = run_dir
         summary.append(data)
-        report_lines = [f"Blade {blade_dir.name}"]
-        for h in HEADERS:
-            if h in data:
-                report_lines.append(f"{h}: {condense(data[h])}")
+        report_lines = [f"Blade: {blade_dir.name}"]
+        if data.get("geometry_lines"):
+            report_lines.append("Geometry Preprocessing:")
+            report_lines.extend(data["geometry_lines"])
+            report_lines.append("")
+        if data.get("performance_lines"):
+            report_lines.append("Performance Summary:")
+            report_lines.extend(data["performance_lines"])
+            report_lines.append("")
         mesh = data.get("mesh", {})
         if mesh:
             report_lines.append(
@@ -179,47 +250,46 @@ def main():
                 f"Last iteration: {data.get('last_iteration')}  Final residual: {data.get('final_residual')}"
             )
         report_text = "\n".join(report_lines)
-        print(report_text)
-        (run_dir / "run_report.txt").write_text(report_text)
+        report_entries.append(report_text)
 
     if not summary:
         print("No runs found.")
         return
 
+    divider = "\n" + ("-" * 40) + "\n"
+    overall_text = divider.join(report_entries)
+    report_file = run_reports_dir / f"{date_str}_Test_{test_num}_report.txt"
+    report_file.write_text(overall_text)
+    print(f"Report saved to {report_file}")
+
     blades = [d["blade"] for d in summary]
     times = [d.get("wall_hours", 0) * 60 for d in summary]
     iters = [d.get("iterations", d.get("last_iteration")) for d in summary]
     points = [d.get("mesh", {}).get("grid_points") for d in summary]
+    angles = [d.get("mesh", {}).get("min_orth_angle") for d in summary]
+    face_ar = [d.get("mesh", {}).get("max_face_area_ar") for d in summary]
+    subvol = [d.get("mesh", {}).get("max_subvol_ratio") for d in summary]
+    colors = ["blue" if d.get("success") else "red" for d in summary]
+    out_dirs = [run_reports_dir]
 
-    fig, ax = plt.subplots()
-    ax.bar(blades, times)
-    ax.set_ylabel("Wall-clock time [min]")
-    ax.set_title("Convergence time")
-    plt.tight_layout()
-    for d in summary:
-        fig.savefig(d["run_dir"] / "convergence_time.png")
-    plt.show()
-    plt.close(fig)
+    plot_metric(blades, times, colors, "Wall-clock time [min]", "Convergence time",
+                "convergence_time.png", out_dirs)
+    plot_metric(blades, iters, colors, "Iterations", "Iteration count",
+                "iterations.png", out_dirs)
+    plot_metric(blades, points, colors, "Grid points", "Mesh size",
+                "grid_points.png", out_dirs)
 
-    fig, ax = plt.subplots()
-    ax.bar(blades, iters)
-    ax.set_ylabel("Iterations")
-    ax.set_title("Iteration count")
-    plt.tight_layout()
-    for d in summary:
-        fig.savefig(d["run_dir"] / "iterations.png")
-    plt.show()
-    plt.close(fig)
+    if any(a is not None for a in angles):
+        plot_metric(blades, angles, colors, "Min orthogonality angle",
+                    "Minimum Orthogonality", "min_orth_angle.png", out_dirs)
 
-    fig, ax = plt.subplots()
-    ax.bar(blades, points)
-    ax.set_ylabel("Grid points")
-    ax.set_title("Mesh size")
-    plt.tight_layout()
-    for d in summary:
-        fig.savefig(d["run_dir"] / "grid_points.png")
-    plt.show()
-    plt.close(fig)
+    if any(a is not None for a in face_ar):
+        plot_metric(blades, face_ar, colors, "Max CV Face Area AR",
+                    "Face Area Aspect Ratio", "max_face_area_ar.png", out_dirs)
+
+    if any(a is not None for a in subvol):
+        plot_metric(blades, subvol, colors, "Max CV sub-volume ratio",
+                    "Sub-volume Ratio", "max_subvol_ratio.png", out_dirs)
 
 
 if __name__ == "__main__":

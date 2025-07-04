@@ -173,6 +173,7 @@ def runSU2_datablade():
             print(f"Config file not found at: {config_file}")
             return
         
+        print("SU2 Run Initialized!")
         # Save current working directory
         orig_dir = os.getcwd()
         # Change to the directory where the config file is located
@@ -187,8 +188,7 @@ def runSU2_datablade():
                 stderr=subprocess.STDOUT,
                 check=False,
             )
-        print("SU2 Run Initialized!")
-
+        
         # Build summary from log
         begin_marker = "------------------------------ Begin Solver -----------------------------"
         exit_markers = [
