@@ -1,6 +1,6 @@
 
 #!/usr/bin/env python3
-#Created on 03-07-2025, 13:36:15
+#Created on 03-07-2025, 18:07:23
 #@author: Freddy Chica
 #Disclaimer: GPT-o3 & Codex were heavily used for the elaboration of this script
 

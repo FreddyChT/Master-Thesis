@@ -165,7 +165,6 @@ SURFACE_FILENAME        = surface_flow{string}_{bladeName}
 
 def runSU2_datablade():
     # Run SU2 simulation using the config file.
-    print("SU2 Run Initialized!")
     config_file = run_dir / f"cascade2D{string}_{bladeName}.cfg"
     try:
         if os.path.exists(config_file):

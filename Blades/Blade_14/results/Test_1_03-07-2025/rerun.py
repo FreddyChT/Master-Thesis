@@ -1,6 +1,6 @@
 
 #!/usr/bin/env python3
-#Created on 03-07-2025, 12:23:16
+#Created on 03-07-2025, 17:45:01
 #@author: Freddy Chica
 #Disclaimer: GPT-o3 & Codex were heavily used for the elaboration of this script
 
@@ -67,7 +67,7 @@ TI = 3.5
 #   MESHING
 # ─────────────────────────────────────────────────────────────────────────────
 dist_inlet = 1
-dist_outlet = 1
+dist_outlet = 1.5
 sizeCellFluid = 0.040056142969581925
 sizeCellAirfoil = 0.020028071484790962
 nCellAirfoil = 549
@@ -83,7 +83,7 @@ dist_TE = 0.010014035742395481
 VolWAkeIn = 0.014019650039353673
 VolWAkeOut = 0.040056142969581925
 WakeXMin = 0.10014035742395483
-WakeXMax = 2.0028071484790964
+WakeXMax = 2.5035089355988704
 WakeYMin = -5.06158
 WakeYMax = 5.06158
 

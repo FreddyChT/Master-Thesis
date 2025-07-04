@@ -222,7 +222,7 @@ def mesh_datablade():
         f.write(f"Field[7].VOut  = { VolWAkeOut };\n")          # background size outside
         # box from just upstream of LE (−0.1·c) to outlet (+dist_outlet·c)
         f.write(f"Field[7].XMin  = { WakeXMin };\n")
-        f.write(f"Field[7].XMax  = { x15002 };\n")
+        f.write(f"Field[7].XMax  = { x15002 - 0.5 * axial_chord };\n")
         # full pitch height, centered on camber line (y=0)
         f.write(f"Field[7].YMin  = { -y15002 };\n")
         f.write(f"Field[7].YMax  = { y15002 };\n")
