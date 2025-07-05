@@ -17,8 +17,11 @@ import matplotlib.pyplot as plt
 
 plt.rcParams.update({
     "text.usetex": True,
-    "font.family": "Helvetica"
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Helvetica"],
+    "text.latex.preamble": r"\usepackage{helvet}"
 })
+
 
 
 # Section headers used in SU2 logs
@@ -200,7 +203,7 @@ def plot_metric(blades, values, colors, ylabel, title, filename, out_dirs):
     plt.setp(ax.get_xticklabels(), rotation=90)
     legend_handles = [plt.Rectangle((0, 0), 1, 1, color="blue"),
                       plt.Rectangle((0, 0), 1, 1, color="red")]
-    ax.legend(legend_handles, ["Converged", "Diverged"], frameon=False)
+    ax.legend(legend_handles, ["Converged", "Diverged"], frameon=True)
     plt.tight_layout()
     for d in out_dirs:
         fig.savefig(d / filename)

@@ -14,8 +14,11 @@ from math import log10, sqrt
 
 plt.rcParams.update({
     "text.usetex": True,
-    "font.family": "Helvetica"
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Helvetica"],
+    "text.latex.preamble": r"\usepackage{helvet}"
 })
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # File Validation Helper
@@ -756,7 +759,8 @@ def SU2_DataPlotting(
         plt.scatter(exp_s, exp_data, s=0.5, color='red', label='Mises Data')
 
     plt.ylabel(f'{quantity} - {bladeName}')
-    plt.grid(visible=True, color='lightgray')
+    plt.xlabel(r'S/S_{total}')
+    #plt.grid(visible=True, color='lightgray')
     if mirror_PS:
         plt.xlim(-1, 1)       # show full mirror
     else:

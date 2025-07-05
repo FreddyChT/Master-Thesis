@@ -6,9 +6,10 @@ from utils import *
 
 plt.rcParams.update({
     "text.usetex": True,
-    "font.family": "Helvetica"
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Helvetica"],
+    "text.latex.preamble": r"\usepackage{helvet}"
 })
-
 
 
 def post_processing_datablade():
@@ -28,7 +29,8 @@ def post_processing_datablade():
     #plt.plot(hist['Inner_Iter'], hist['     "rms[nu]"    '], label='v')                    # Viscosity
     #plt.plot(hist['Inner_Iter'], hist['     "rms[k]"    '], label='k')                     # TKE
     #plt.plot(hist['Inner_Iter'], hist['     "rms[w]"    '], label='w')
-    plt.grid(alpha=0.3);  plt.legend();  plt.xlabel('Iteration')
+    #plt.grid(alpha=0.3);  
+    plt.legend();  plt.xlabel('Iteration')
     plt.ylabel(f'RMS residual - {bladeName}');
     plt.savefig(run_dir / f'rms_residual_{string}_{bladeName}.svg', format='svg', bbox_inches='tight')
     plt.show()
@@ -36,14 +38,16 @@ def post_processing_datablade():
     # Linear Solver Tracking
     plt.plot(hist['Inner_Iter'], hist['    "LinSolRes"   '], label='LSRes')                 # Linear Solver Residual
     plt.plot(hist['Inner_Iter'], hist['  "LinSolResTurb" '], label='LSResTurb')             # Linear Solver Residual
-    plt.grid(alpha=0.3);  plt.legend();  plt.xlabel('Iteration')
+    #plt.grid(alpha=0.3);  
+    plt.legend();  plt.xlabel('Iteration')
     plt.ylabel(f'Linear Solver residual - {bladeName}');
     plt.savefig(run_dir / f'linear_solver_residual_{string}_{bladeName}.svg', format='svg', bbox_inches='tight')
     plt.show()
 
-    # RMS Tracking
+    # CFL Tracking
     plt.plot(hist['Inner_Iter'], hist['     "Avg CFL"    '], label='CFL')                   # CFL used per iteration
-    plt.grid(alpha=0.3);  plt.legend();  plt.xlabel('Iteration')
+    #plt.grid(alpha=0.3);  
+    plt.legend();  plt.xlabel('Iteration')
     plt.ylabel(f'Average CFL - {bladeName}');
     plt.savefig(run_dir / f'cfl_{string}_{bladeName}.svg', format='svg', bbox_inches='tight')
     plt.show()
@@ -51,7 +55,8 @@ def post_processing_datablade():
     # Aero Coefficients Tracking
     plt.plot(hist['Inner_Iter'], hist['   "CD(blade1)"   '], label='CD')                    # Drag Coefficient
     plt.plot(hist['Inner_Iter'], hist['   "CL(blade1)"   '], label='CL')                    # Lift Coefficient
-    plt.grid(alpha=0.3);  plt.legend();  plt.xlabel('Iteration')
+    #plt.grid(alpha=0.3);  
+    plt.legend();  plt.xlabel('Iteration')
     plt.ylabel(f'Aerodynamic Coefficients - {bladeName}');
     plt.savefig(run_dir / f'aero_coefficients_{string}_{bladeName}.svg', format='svg', bbox_inches='tight')
     plt.show()
@@ -179,9 +184,9 @@ def post_processing_datablade():
         diff_ss = su2_ss - ss_mach
         diff_ps = su2_ps - ps_mach
         diff_all = np.concatenate([diff_ss, diff_ps])
-        rms = np.sqrt(np.nanmean(diff_all**2))
+        rms = np.sqrt(np.nanmean(diff_all**2)) * 100
     
-        print(f"\nCombined RMS error = {rms:.4f}")
+        print(f"\nCombined RMS error = {rms:.4f}%")
         # Record RMS value for later reporting
         summary_file = run_dir / "run_summary.txt"
         try:
