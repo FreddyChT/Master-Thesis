@@ -14,6 +14,13 @@ import tkinter as tk
 from tkinter import simpledialog
 import matplotlib.pyplot as plt
 
+
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "Helvetica"
+})
+
+
 # Section headers used in SU2 logs
 HEADERS = ["Geometry Preprocessing", "Performance Summary"]
 
@@ -173,6 +180,13 @@ def parse_log(log_path):
     iter_count, resid = parse_last_iteration(text)
     data["last_iteration"] = iter_count
     data["final_residual"] = resid
+    for line in text:
+        if "Mach RMS error" in line:
+            try:
+                data["mach_rms"] = float(line.split(":", 1)[1])
+            except (IndexError, ValueError):
+                pass
+            break
     data["success"] = any("Exit Success" in line for line in text)
     return data
 
@@ -249,6 +263,8 @@ def main():
             report_lines.append(
                 f"Last iteration: {data.get('last_iteration')}  Final residual: {data.get('final_residual')}"
             )
+        if data.get("mach_rms") is not None:
+            report_lines.append(f"Mach RMS error: {data['mach_rms']:.4f}")
         report_text = "\n".join(report_lines)
         report_entries.append(report_text)
 

@@ -216,6 +216,7 @@ def runSU2_datablade():
     except Exception as e:
         print("Error", e)
     finally:
+        print("SU2 Run Finalized!")
         # Return to the original working directory
         os.chdir(orig_dir)
         

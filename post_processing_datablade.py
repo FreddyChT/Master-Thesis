@@ -4,6 +4,13 @@ import matplotlib.pyplot as plt
 from utils import *
 
 
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "Helvetica"
+})
+
+
+
 def post_processing_datablade():
     
     # ─────────────────────────────────────────────────────────────────────────────
@@ -14,11 +21,11 @@ def post_processing_datablade():
     hist = pd.read_csv(residuals_file)
 
     # RMS Tracking
-    plt.plot(hist['Inner_Iter'], hist['    "rms[Rho]"    '], label='ρ')                     # Density
-    plt.plot(hist['Inner_Iter'], hist['    "rms[RhoU]"   '], label='ρu')                    # Momentum-x
-    plt.plot(hist['Inner_Iter'], hist['    "rms[RhoE]"   '], label='ρE')                    # Energy
-    #plt.plot(hist['Inner_Iter'], hist['    "rms[RhoV]"   '], label='ρv')                    # Momentum-y
-    #plt.plot(hist['Inner_Iter'], hist['     "rms[nu]"    '], label='v')                     # Viscosity
+    plt.plot(hist['Inner_Iter'], hist['    "rms[Rho]"    '], label=r'$\rho$')               # Density
+    plt.plot(hist['Inner_Iter'], hist['    "rms[RhoU]"   '], label=r'$\rho u$')             # Momentum-x
+    plt.plot(hist['Inner_Iter'], hist['    "rms[RhoE]"   '], label=r'$\rho E$')             # Energy
+    #plt.plot(hist['Inner_Iter'], hist['    "rms[RhoV]"   '], label=r'$\rho v$')            # Momentum-y
+    #plt.plot(hist['Inner_Iter'], hist['     "rms[nu]"    '], label='v')                    # Viscosity
     #plt.plot(hist['Inner_Iter'], hist['     "rms[k]"    '], label='k')                     # TKE
     #plt.plot(hist['Inner_Iter'], hist['     "rms[w]"    '], label='w')
     plt.grid(alpha=0.3);  plt.legend();  plt.xlabel('Iteration')
@@ -130,8 +137,13 @@ def post_processing_datablade():
     # machDistribution file data extraction
     if file_nonempty(mises_machFile):
         ps_frac, ss_frac, ps_mach, ss_mach = MISES_machDataGather(mises_machFile)
-        blade_frac_mach = np.concatenate([ps_frac, ss_frac])
-        blade_mach      = np.concatenate([ps_mach, ss_mach])
+        if len(ps_frac) and len(ss_frac):
+            blade_frac_mach = np.concatenate([ps_frac, ss_frac])
+            blade_mach      = np.concatenate([ps_mach, ss_mach])
+        else:
+            print("[WARNING] MISES mach file contained no valid data; skipping RMS computation")
+            blade_frac_mach = None
+            blade_mach = None
     else:
         print("[INFO] No MISES mach data found; plotting SU2 results only")
         blade_frac_mach = None
@@ -166,9 +178,17 @@ def post_processing_datablade():
         # --------- Combined RMS
         diff_ss = su2_ss - ss_mach
         diff_ps = su2_ps - ps_mach
-        rms = np.sqrt(np.mean(np.concatenate([diff_ss, diff_ps])**2))
+        diff_all = np.concatenate([diff_ss, diff_ps])
+        rms = np.sqrt(np.nanmean(diff_all**2))
     
         print(f"\nCombined RMS error = {rms:.4f}")
+        # Record RMS value for later reporting
+        summary_file = run_dir / "run_summary.txt"
+        try:
+            with open(summary_file, "a") as f:
+                f.write(f"Mach RMS error: {rms:.4f}\n")
+        except OSError:
+            print(f"[WARNING] Could not append RMS to {summary_file}")
     
     # ─────────────────────────────────────────────────────────────────────────────
     #   PLOTTING

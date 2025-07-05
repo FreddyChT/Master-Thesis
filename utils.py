@@ -12,6 +12,11 @@ from OCC.Core.Geom import Geom_BSplineCurve
 from OCC.Core.gp import gp_Pnt
 from math import log10, sqrt
 
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "Helvetica"
+})
+
 # ──────────────────────────────────────────────────────────────────────────────
 # File Validation Helper
 # ──────────────────────────────────────────────────────────────────────────────
