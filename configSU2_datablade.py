@@ -1,4 +1,5 @@
 import os
+import subprocess
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -16,7 +17,7 @@ def configSU2_datablade():
 % Author: Freddy Chica	                                                       %
 % Institution: Université Catholique de Louvain                                %
 % Date: 11, Nov 2024                                                           %
-% File Version                                                                 %
+% File Version: 9                                                              %
 %                                                                              %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -25,7 +26,7 @@ def configSU2_datablade():
 SOLVER                  = RANS
 KIND_TURB_MODEL         = SA
 SA_OPTIONS              = BCM
-KIND_TRANS_MODEL        = NONE
+KIND_TRANS_MODEL        = NONE                        % NONE or LM
 MATH_PROBLEM            = DIRECT
 RESTART_SOL             = NO
 
@@ -33,13 +34,13 @@ RESTART_SOL             = NO
 % -------------------- COMPRESSIBLE FREE-STREAM DEFINITION --------------------%
 MACH_NUMBER                     = {M1}              % Inlet Mach number
 AOA                             = {alpha1}          % Midspan cascade aligned with the flow
-FREESTREAM_PRESSURE             = {P01}              % Free-stream static pressure in Pa
-FREESTREAM_TEMPERATURE          = {T01}              % Free-stream static temperature
-REYNOLDS_NUMBER                 = {Re}             % Free-stream Reynolds number
+FREESTREAM_PRESSURE             = {P01}             % Free-stream static pressure in Pa
+FREESTREAM_TEMPERATURE          = {T01}             % Free-stream static temperature
+REYNOLDS_NUMBER                 = {Re}              % Free-stream Reynolds number
 REYNOLDS_LENGTH                 = {axial_chord}     % Normalization length
-FREESTREAM_TURBULENCEINTENSITY  = 0.001 % 0.025{TI2/100}         % (If SST used) freestream turbulence intensity (2% as example)
-FREESTREAM_TURB2LAMVISCRATIO    = 0.1  %10              % (If SST used) ratio of turbulent to laminar viscosity
-%FREESTREAM_NU_FACTOR            = 3                 % (For SA) initial turbulent viscosity ratio (default 3)
+FREESTREAM_TURBULENCEINTENSITY  = {TI/100} % 0.001  % (If SST used) freestream turbulence intensity (2% as example)
+FREESTREAM_TURB2LAMVISCRATIO    = 0.1  %10          % (If SST used) ratio of turbulent to laminar viscosity
+%FREESTREAM_NU_FACTOR            = 3                % (For SA) initial turbulent viscosity ratio (default 3)
 % The above turbulence freestream settings are not all used for SA, but included for completeness.
 
 REF_ORIGIN_MOMENT_X             = 0.0
@@ -71,8 +72,8 @@ MARKER_ANALYZE          = ( inlet, outlet, blade1 )                         % Ma
 MARKER_INLET            = ( inlet, {T01}, {P01}, {np.cos(alpha1 * np.pi / 180)}, {np.sin(alpha1 * np.pi / 180)}, 0)
 MARKER_OUTLET           = ( outlet,  {P2})
 MARKER_PERIODIC         = ( symmetricWallsBOTTOM, symmetricWallsTOP, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, {pitch}, 0.0 )
-%MARKER_INLET_TURBULENT = ( inlet, TI2, nu_factor2 )          %SST Model
-%MARKER_INLET_TURBULENT = ( inlet,  nu_factor2 )                %SA Model
+%MARKER_INLET_TURBULENT = ( inlet, TI2, nu_factor2 )                        %SST Model
+%MARKER_INLET_TURBULENT = ( inlet,  nu_factor2 )                            %SA Model
 
 
 %-------------------------- NUMERICAL METHODS SETTINGS ------------------------%
@@ -121,7 +122,7 @@ MG_DAMP_PROLONGATION    = 0.75                      % Damping factor for the cor
 
 
 % ------------------------------- SOLVER CONTROL ------------------------------%
-CONV_RESIDUAL_MINVAL    = -8                        % Can try lower but unnecessary
+CONV_RESIDUAL_MINVAL    = -7                        % Can try lower but unnecessary
 CONV_FIELD              = RMS_DENSITY               % Can also try MASSFLOW
 CONV_STARTITER          = 500                       % Original 500
 ITER                    = 7000
@@ -172,17 +173,50 @@ def runSU2_datablade():
             print(f"Config file not found at: {config_file}")
             return
         
+        print("SU2 Run Initialized!")
         # Save current working directory
         orig_dir = os.getcwd()
         # Change to the directory where the config file is located
         os.chdir(run_dir)
         
-        # Run SU2 from the config directory
-        os.system(f'mpiexec -n {no_cores} SU2_CFD "{config_file}"')
-        print("SU2 Run Initialized!")
+        # Run SU2 from the config directory and capture output
+        log_file = run_dir / "su2.log"
+        with open(log_file, "w") as logf:
+            subprocess.run(
+                ["mpiexec", "-n", str(no_cores), "SU2_CFD", str(config_file)],
+                stdout=logf,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+        
+        # Build summary from log
+        begin_marker = "------------------------------ Begin Solver -----------------------------"
+        exit_markers = [
+            "----------------------------- Solver Exit -------------------------------",
+            "------------------------------ Error Exit -------------------------------",
+        ]
+        with open(log_file, "r") as logf:
+            log_lines = logf.readlines()
+
+        begin_idx = next((i for i, l in enumerate(log_lines) if begin_marker in l), len(log_lines))
+
+        exit_idx = len(log_lines)
+        for marker in exit_markers:
+            found = next((i for i, l in enumerate(log_lines) if marker in l), None)
+            if found is not None:
+                exit_idx = found
+                break
+
+        summary_lines = log_lines[:begin_idx]
+        summary_lines += log_lines[max(0, exit_idx - 5):]
+
+        summary_file = run_dir / "run_summary.txt"
+        with open(summary_file, "w") as f:
+            f.writelines(summary_lines)
     except Exception as e:
         print("Error", e)
     finally:
+        print("SU2 Run Finalized!")
         # Return to the original working directory
         os.chdir(orig_dir)
         

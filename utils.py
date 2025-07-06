@@ -1,14 +1,39 @@
 import numpy as np
+import math
 import shutil
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline
 from scipy.signal import savgol_filter
+from pathlib import Path
 from OCC.Core.TColgp import TColgp_Array1OfPnt
 from OCC.Core.TColStd import TColStd_Array1OfReal, TColStd_Array1OfInteger
 from OCC.Core.Geom import Geom_BSplineCurve
 from OCC.Core.gp import gp_Pnt
 from math import log10, sqrt
+
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Helvetica"],
+    "text.latex.preamble": r"\usepackage{helvet}"
+})
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# File Validation Helper
+# ──────────────────────────────────────────────────────────────────────────────
+
+def file_nonempty(path: Path) -> bool:
+    """Return ``True`` if *path* exists and has a non-zero size."""
+    p = Path(path)
+    try:
+        if p.is_file() and p.stat().st_size > 0:
+            return True
+    except OSError:
+        pass
+    print(f"[WARNING] Missing or empty file: {p}")
+    return False
 
 # ────────────────────────────────────────────────────────────────────────────────
 # File reading and extraction
@@ -29,6 +54,8 @@ def extract_from_ises(file_path):
         line = f.readline()
         tokens = line.split()
         # Extract the third token (index 2) and convert it to a float
+        M2 = np.float64(tokens[0])
+        P2_P0a = np.float64(tokens[1])
         alpha2 = np.float64(tokens[2])
         
         # Skip to next lines to extract Reynolds No.
@@ -41,8 +68,10 @@ def extract_from_ises(file_path):
         print("Inlet flow angle (deg):", int(np.degrees(np.arctan(alpha1))))
         print("Outlet flow angle (deg):", int(np.degrees(np.arctan(alpha2))))
         print("Reynolds number:", reynolds)
+        print("Outlet Mach:", M2)
+        print("Outlet Pressure Ratio:", P2_P0a)
         
-    return alpha1, alpha2, reynolds
+    return alpha1, alpha2, reynolds, M2, P2_P0a
 
 def extract_from_blade(file_path):
     #Opens the given file, skips header lines, and extracts the first numerical value from the next line.
@@ -618,6 +647,32 @@ def compute_Spec_Dissipation(k, ILS):
     omega = C_mu**(3/4) * k**(1/2)/ILS
     return omega
 
+def freestream_total_pressure(Re, M, L, T,
+                              mu=1.8464e-5,   # dynamic viscosity of air at ~300 K [kg m-1 s-1]
+                              gamma=1.4,      # ratio of specific heats for air
+                              R=287.058):     # gas constant for air [J kg-1 K-1]
+    """
+    Returns (p_static, p_total) in Pa.
+    """
+    a = np.sqrt(gamma * R * T)                 # speed of sound
+    rho = Re * mu / (M * L * a)                  # density from Re definition
+    p_static = rho * R * T                       # ideal-gas static pressure
+    pressure_ratio = (1 + 0.5*(gamma-1)*M**2)**(gamma/(gamma-1))
+    p_total = p_static * pressure_ratio          # stagnation pressure
+    return p_static, p_total
+
+
+# --- example with your numbers ---------------------------------------------
+Re = 6.0e5      # Reynolds number
+M  = 0.5        # Mach number
+L  = 0.20       # chord length [m] – change to your model’s chord
+T  = 288.0      # static temp [K] – change to test temperature
+
+p_static, p_total = freestream_total_pressure(Re, M, L, T)
+
+print(f"Static pressure : {p_static/1000:.2f} kPa")
+print(f"Total pressure  : {p_total/1000:.2f} kPa")
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #   SU2 Post-Processing
@@ -693,27 +748,25 @@ def SU2_DataPlotting(
     Plots SU2 results in Non-Norm style (direct values) plus
     optional experimental data for direct comparison.
     """
-    fig, ax1 = plt.subplots(figsize=(14, 9))
-
     # Plot SU2 (suction & pressure side)
-    plt.plot(sSSnorm, dataSS, marker='o', markersize=2, linestyle='-', color='darkblue', label='SU2 (SS)')
+    plt.plot(sSSnorm, dataSS, marker='o', markersize=0.5, linestyle='-', color='darkblue', label='SU2 (SS)')
     
     s_ps = -sPSnorm if mirror_PS else sPSnorm
-    plt.plot(s_ps, dataPS, marker='o', markersize=2, linestyle='-', color='lightblue', label='SU2 (PS)')
+    plt.plot(s_ps, dataPS, marker='o', markersize=0.5, linestyle='-', color='lightblue', label='SU2 (PS)')
 
     # Overlay optional experimental distribution
     if (exp_s is not None) and (exp_data is not None):
-        plt.scatter(exp_s, exp_data, s=5, color='red', label='Mises Data')
+        plt.scatter(exp_s, exp_data, s=0.5, color='red', label='Mises Data')
 
-    plt.ylabel(f'{quantity}', size=15)
-    plt.tick_params(axis='y', labelcolor='grey')
-    plt.grid(visible=True, color='lightgray', linestyle='--')
+    plt.ylabel(f'{quantity} - {bladeName}')
+    plt.xlabel(r'S/S_{total}')
+    #plt.grid(visible=True, color='lightgray')
     if mirror_PS:
         plt.xlim(-1, 1)       # show full mirror
     else:
         plt.xlim(0, 1)
-    plt.legend(loc='upper left', prop={'size': 20}, edgecolor='k', fancybox=False)
-    plt.savefig(run_dir / f"non-normalized{quantity}_{string}_{bladeName}.svg", format='svg', bbox_inches='tight')
+    plt.legend(loc='upper left', edgecolor='k', fancybox=False)
+    plt.savefig(run_dir / f"non-normalized_{quantity}_{string}_{bladeName}.svg", format='svg', bbox_inches='tight')
     plt.show()
 
 
@@ -732,6 +785,10 @@ def MISES_blDataGather(file_path):
     The ``s`` (surface fraction) column of each DataFrame is normalised to
     ``[0, 1]``.
     """
+
+    file_path = Path(file_path)
+    if not file_nonempty(file_path):
+        return pd.DataFrame(), pd.DataFrame()
 
     column_names = [
         "x", "y", "s", "b", "Ue/a0", "delta_star", "theta", "theta_star",
@@ -786,6 +843,10 @@ def MISES_fieldDataGather(file_path):
     Blank lines separate the data into streamtubes.
     Returns all_x, all_y, all_rho, all_p, all_u, all_v, all_q, all_m
     """
+    file_path = Path(file_path)
+    if not file_nonempty(file_path):
+        return [], [], [], [], [], [], [], []
+
     all_x  = []
     all_y  = []
     all_rho= []
@@ -854,6 +915,10 @@ def MISES_machDataGather(file_path):
     Blank lines separate the data into upper and lower surface.
     Returns blade_frac, blade_mach
     """
+    file_path = Path(file_path)
+    if not file_nonempty(file_path):
+        return np.array([]), np.array([]), np.array([]), np.array([])
+
     #We extract the MISES surface infromation in lists for upper and lower surfaces
     with open(file=file_path, mode='r') as f:
         next(f)

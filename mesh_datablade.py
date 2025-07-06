@@ -222,10 +222,10 @@ def mesh_datablade():
         f.write(f"Field[7].VOut  = { VolWAkeOut };\n")          # background size outside
         # box from just upstream of LE (−0.1·c) to outlet (+dist_outlet·c)
         f.write(f"Field[7].XMin  = { WakeXMin };\n")
-        f.write(f"Field[7].XMax  = { WakeXMax };\n")
+        f.write(f"Field[7].XMax  = { x15002 - 0.5 * axial_chord };\n")
         # full pitch height, centered on camber line (y=0)
-        f.write(f"Field[7].YMin  = { WakeYMin };\n")
-        f.write(f"Field[7].YMax  = { WakeYMax };\n")
+        f.write(f"Field[7].YMin  = { -y15002 };\n")
+        f.write(f"Field[7].YMax  = { y15002 };\n")
         # flat 2D mesh
         f.write("Field[7].ZMin  = 0;\n")
         f.write("Field[7].ZMax  = 0;\n")
@@ -255,15 +255,14 @@ def mesh_datablade():
     
     # Run gmsh to generate the SU2 mesh.
     print("STARTING mesh generation...")
-    try:
-        if os.path.exists(geo_file):
-            print(f"File exists at: {geo_file}")
-        else:
-            print(f"File not found at: {geo_file}")
-            
-        os.system(f'gmsh "{geo_file}" -2 -format su2')
-        print("Mesh successfully created!")
-    except Exception as e:
-        print("Error", e)       
+    import gmsh
+    
+    gmsh.initialize()
+    gmsh.open(str(geo_file))
+    gmsh.model.mesh.generate(2)
+    gmsh.write(str(run_dir / f"cascade2D_{string}_{bladeName}.msh"))
+    gmsh.write(str(run_dir / f"cascade2D_{string}_{bladeName}.su2"))
+    gmsh.finalize()
+      
 
 
