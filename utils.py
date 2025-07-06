@@ -582,6 +582,94 @@ def compute_bl_parameters(U_inf: float,
                 bl_thickness=delta)
 
 
+# ────────────────────────────────────────────────────────────────────────
+#  Boundary-layer integrals along an outward normal
+# ────────────────────────────────────────────────────────────────────────
+
+def _normal_at_surface_point(x_surf, y_surf, x_prev, y_prev, x_next, y_next):
+    """Unit normal pointing outside the blade (2-D)."""
+    # tangent = next − prev   (already LE→TE ordering)
+    tx, ty = x_next - x_prev, y_next - y_prev
+    # outward = (+ty, −tx) for a left-hand (anti-clockwise) contour
+    nx, ny =  ty, -tx
+    mag = np.hypot(nx, ny)
+    return nx/mag, ny/mag
+
+
+def _bl_integrals(y, rho, u):
+    """Return θ, δ*, H given wall-normal profiles (already non-dim)."""
+    # ρ_e, U_e at last entry
+    rho_e, ue = rho[-1], u[-1]
+    f1 = (rho/rho_e)*(u/ue)
+    theta      = np.trapz(f1*(1 - u/ue), y)
+    delta_star = np.trapz((rho/rho_e)*(1 - u/ue), y)
+    H          = delta_star/theta if theta > 0 else np.nan
+    return theta, delta_star, H
+
+
+def bl_distributions(surface_df: "pd.DataFrame",
+                     volume_df:  "pd.DataFrame",
+                     y_max: float = 0.01,
+                     n_samples: int = 50):
+    """
+    Loop over every surface node and integrate θ,  δ*,  Re_θ,  H.
+
+    Returns
+    -------
+    dict with arrays keyed by 's', 'Re_theta', 'H', split into SS/PS later.
+    """
+    from scipy.spatial import cKDTree
+
+    # --- 1) accelerator for nearest-neighbour interpolation ------------------
+    vol_xy   = volume_df[['x', 'y']].values
+    vol_u    = (volume_df['Momentum_x']**2 +
+                volume_df['Momentum_y']**2).pow(0.5).values / volume_df['Density'].values
+    vol_rho  = volume_df['Density'].values
+    vol_mu   = volume_df['Laminar_Viscosity'].values
+    tree = cKDTree(vol_xy)
+
+    # --- 2) prepare outputs --------------------------------------------------
+    theta_arr, Re_theta_arr, H_arr = [], [], []
+    s_coord = surface_df['s_norm'].values
+
+    xs, ys = surface_df['x'].values, surface_df['y'].values
+    for i, (xs_i, ys_i) in enumerate(zip(xs, ys)):
+        # tangent neighbours (cyclic indexing)
+        ip = (i+1) % len(xs); im = (i-1) % len(xs)
+        nx, ny = _normal_at_surface_point(xs_i, ys_i,
+                                          xs[im], ys[im], xs[ip], ys[ip])
+
+        # sample points along the normal
+        y_local = np.linspace(0.0, y_max, n_samples)
+        x_samp  = xs_i + nx * y_local
+        y_samp  = ys_i + ny * y_local
+        _, idxs = tree.query(np.column_stack([x_samp, y_samp]), k=1)
+
+        u_prof   = vol_u[idxs]
+        rho_prof = vol_rho[idxs]
+        mu_prof  = vol_mu[idxs]
+
+        # trim at u / u_e >= 0.99
+        mask = u_prof / u_prof[-1] < 0.99
+        if mask.any():
+            cut = np.where(~mask)[0][0] + 1  # include first ≥0.99 point
+            y_loc = y_local[:cut];  u_p = u_prof[:cut];  rho_p = rho_prof[:cut]
+            mu_e  = mu_prof[cut-1];  # last available μ
+        else:
+            y_loc, u_p, rho_p = y_local, u_prof, rho_prof
+            mu_e = mu_prof[-1]
+
+        θ, δs, H = _bl_integrals(y_loc, rho_p, u_p)
+        Re_theta = rho_p[-1]*u_p[-1]*θ / mu_e
+
+        theta_arr.append(θ); Re_theta_arr.append(Re_theta); H_arr.append(H)
+
+    return dict(s=s_coord,
+                Re_theta=np.array(Re_theta_arr),
+                H=np.array(H_arr))
+
+
+
 # ────────────────────────────────────────────────────────────────────────────────
 # Computation Helper Functions
 # ────────────────────────────────────────────────────────────────────────────────
