@@ -224,7 +224,12 @@ def main():
     summary = []
     report_entries = []
 
-    for blade_dir in sorted(blades_root.iterdir()):
+    # Sort blade directories by the numeric id in the name in descending order
+    def blade_sort_key(path: Path):
+        match = re.search(r"(\d+)$", path.name)
+        return -(int(match.group(1)) if match else 0)
+
+    for blade_dir in sorted(blades_root.iterdir(), key=blade_sort_key):
         if not blade_dir.is_dir():
             continue
         run_dir = blade_dir / "results" / f"Test_{test_num}_{date_str}"

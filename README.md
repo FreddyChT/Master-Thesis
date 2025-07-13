@@ -53,3 +53,6 @@ time, iteration count, mesh size and mesh quality metrics (minimum
 orthogonality angle, maximum CV face area aspect ratio and maximum CV
 sub-volume ratio). Blade names on the plots are rotated vertically for
 readability and bars are colored red if the simulation failed to converge.
+
+Blades in the summary are ordered by their numerical index in descending
+order (e.g. `Blade_10` appears before `Blade_2`).
