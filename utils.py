@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline
 from scipy.signal import savgol_filter
 from pathlib import Path
+import subprocess
 from OCC.Core.TColgp import TColgp_Array1OfPnt
 from OCC.Core.TColStd import TColStd_Array1OfReal, TColStd_Array1OfInteger
 from OCC.Core.Geom import Geom_BSplineCurve
@@ -1097,3 +1098,22 @@ def MISES_DataGather(data, xNorm, y, n):
     
     return(xSSnorm, xPSnorm, dataSS, dataPS, dataSSTE)
 
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#   Paraview Integration
+# ─────────────────────────────────────────────────────────────────────────────
+
+def launch_paraview_live(run_dir, bladeName, suffix):
+    """Launch the Paraview live visualization script."""
+    script_path = Path(__file__).resolve().parent / 'liveParaview_datablade.py'
+    pvpython = shutil.which('pvpython') or shutil.which('pvpython.exe')
+    if pvpython is None:
+        raise FileNotFoundError('pvpython executable not found')
+    subprocess.Popen([
+        pvpython,
+        str(script_path),
+        str(run_dir),
+        bladeName,
+        suffix,
+    ])

@@ -423,7 +423,11 @@ def main():
         
         mesh_datablade.mesh_datablade()
         configSU2_datablade.configSU2_datablade()
-        configSU2_datablade.runSU2_datablade()
+        proc, logf = configSU2_datablade.runSU2_datablade(background=True)
+        utils.launch_paraview_live(run_dir, bladeName, string)
+        proc.wait()
+        logf.close()
+        configSU2_datablade._summarize_su2_log(run_dir / "su2.log")
         post_processing_datablade.post_processing_datablade()
 
 if __name__ == '__main__':
