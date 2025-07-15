@@ -15,6 +15,25 @@ from paraview.simple import *
 #### disable automatic camera reset on 'Show'
 paraview.simple._DisableFirstRenderCameraReset()
 
+# -----------------------------------------------------------------------------
+# File locations
+# -----------------------------------------------------------------------------
+import sys
+import glob
+
+# pick the VTU file from the first command line argument or search for one
+if len(sys.argv) > 1:
+    volume_vtu = sys.argv[1]
+else:
+    matches = glob.glob("volume_flow_datablade*Blade_*.vtu")
+    volume_vtu = matches[0] if matches else "volume_flow_databladeVALIDATION_Blade_25.vtu"
+    
+volume_vtu = volume_vtu.replace('\\', '/')
+vtu_dir, vtu_file = volume_vtu.rsplit('/', 1) if '/' in volume_vtu else ('', volume_vtu)
+stem = vtu_file.split('.', 1)[0]
+blade_id = stem.rsplit('_', 1)[-1]
+history_csv_path = f"{vtu_dir}/history_databladeVALIDATION_Blade_{blade_id}.csv" if vtu_dir else f"history_databladeVALIDATION_Blade_{blade_id}.csv"
+
 # get active view
 renderView1 = GetActiveViewOrCreate('RenderView')
 
@@ -65,11 +84,11 @@ SetActiveSource(liveProgrammableSource1)
 
 # Properties modified on liveProgrammableSource1
 liveProgrammableSource1.OutputDataSetType = 'vtkUnstructuredGrid'
-liveProgrammableSource1.Script = """# .vtu paraview
-from paraview.vtk.vtkIOXML import vtkXMLUnstructuredGridReader as vtuReader 
-reader = vtuReader() 
-reader.SetFileName('volume_flow_databladeVALIDATION_Blade_25.vtu') 
-reader.Update() 
+liveProgrammableSource1.Script = f"""# .vtu paraview
+from paraview.vtk.vtkIOXML import vtkXMLUnstructuredGridReader as vtuReader
+reader = vtuReader()
+reader.SetFileName('{volume_vtu}')
+reader.Update()
 self.GetOutputDataObject(0).ShallowCopy(reader.GetOutput())"""
 liveProgrammableSource1.ScriptRequestInformation = ''
 liveProgrammableSource1.PythonPath = ''
@@ -124,11 +143,11 @@ liveProgrammableSource2 = LiveProgrammableSource(registrationName='LiveProgramma
 
 # Properties modified on liveProgrammableSource2
 liveProgrammableSource2.OutputDataSetType = 'vtkTable'
-liveProgrammableSource2.Script = """import numpy as np 
-import pandas as pd 
+liveProgrammableSource2.Script = f"""import numpy as np
+import pandas as pd
 
-data = pd.read_csv("history_databladeVALIDATION_Blade_25.csv",sep=\',\') 
-print(data.keys()) 
+data = pd.read_csv('{history_csv_path}',sep=',')
+print(data.keys())
 print(len(data.columns)) 
 for name in data.keys(): 
   array = data[name].to_numpy() 
