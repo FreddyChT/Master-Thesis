@@ -12,6 +12,7 @@ from OCC.Core.TColStd import TColStd_Array1OfReal, TColStd_Array1OfInteger
 from OCC.Core.Geom import Geom_BSplineCurve
 from OCC.Core.gp import gp_Pnt
 from math import log10, sqrt
+import os
 
 plt.rcParams.update({
     "text.usetex": True,
@@ -1107,6 +1108,7 @@ def MISES_DataGather(data, xNorm, y, n):
 def launch_paraview_live(run_dir, bladeName, suffix):
     """Launch the Paraview live visualization script."""
     script_path = Path(__file__).resolve().parent / 'liveParaview_datablade.py'
+    os.environ["PATH"] = ";".join([*os.environ["PATH"].split(";"), "C:\\Program Files\\ParaView-5.12.0-MPI-Windows-Python3.10-msvc2017-AMD64\\bin"])
     pvpython = shutil.which('pvpython') or shutil.which('pvpython.exe')
     if pvpython is None:
         raise FileNotFoundError('pvpython executable not found')
