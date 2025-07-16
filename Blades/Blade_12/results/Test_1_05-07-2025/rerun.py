@@ -11,6 +11,7 @@ sys.path.append(str(Path(__file__).resolve().parents[4]))
 import mesh_datablade
 import configSU2_datablade
 import post_processing_datablade
+import utils
 
 # ─────────────────────────────────────────────────────────────────────────────
 #   INITIALIZATION

@@ -71,6 +71,8 @@ def post_processing_datablade():
     x      = df['x'].values
     y      = df['y'].values
     xNorm  = (x - np.min(x)) / (np.max(x) - np.min(x))
+    df['s_norm'] = surface_fraction(df['x'].values, df['y'].values)
+
     
     '''
     x      = df['x'].values
@@ -127,6 +129,25 @@ def post_processing_datablade():
     machPS = compute_Mx(P01, pressurePS, gamma)
     
     
+    # ── VOLUME solution (needed for BL integrals) ────────────────────────────
+    vol_file = run_dir / f"restart_flow_{string}_{bladeName}.csv"
+    vol_df   = pd.read_csv(vol_file, sep=',')
+    
+    # --- Boundary-layer integrals on the whole blade ------------------------
+    bl_all = bl_distributions(df, vol_df)
+    
+    # split into SS / PS by the same masks returned by SU2_organize -----------
+    mask_ss = df.index.isin(dataSS.index)
+    mask_ps = df.index.isin(dataPS.index)
+    
+    Re_theta_SS = bl_all['Re_theta'][mask_ss]
+    Re_theta_PS = bl_all['Re_theta'][mask_ps]
+    
+    H_SS        = bl_all['H'][mask_ss]
+    H_PS        = bl_all['H'][mask_ps]
+
+    
+    
     # ─────────────────────────────────────────────────────────────────────────────
     #   MISES DATA
     # ─────────────────────────────────────────────────────────────────────────────
@@ -159,14 +180,27 @@ def post_processing_datablade():
         ps_bl, ss_bl = MISES_blDataGather(mises_blFile)
         ps_frac_bl = -ps_bl['s'].values
         ss_frac_bl =  ss_bl['s'].values
+        
         cf_ps = ps_bl['Cf'].values
         cf_ss = ss_bl['Cf'].values
-        cf_bl        = np.concatenate([cf_ps, cf_ss])
+        
+        Re_t_ps = ps_bl['Rtheta'] .values
+        Re_t_ss = ss_bl['Rtheta'] .values
+        
+        H_ps = ps_bl['H'] .values
+        H_ss = ss_bl['H'] .values
+        
+        cf_bl = np.concatenate([cf_ps, cf_ss])
+        Re_t_bl = np.concatenate([Re_t_ps, Re_t_ss])
+        H_bl = np.concatenate([H_ps, H_ss])
         blade_frac_bl = np.concatenate([ps_frac_bl, ss_frac_bl])
     else:
         print("[INFO] No MISES boundary layer data found; plotting SU2 results only")
         cf_bl = None
         blade_frac_bl = None
+        Re_t_bl = None
+        H_bl = None
+        
     
     # field file data extraction
     
@@ -210,3 +244,10 @@ def post_processing_datablade():
                  "Skin Friction Coefficient", string, run_dir, bladeName, mirror_PS=True,
                  exp_s=blade_frac_bl, exp_data=cf_bl)
 
+    SU2_DataPlotting(s_normSS, s_normPS, Re_theta_SS, Re_theta_PS,
+                 "Re_theta", string, run_dir, bladeName, mirror_PS=True,
+                 exp_s=blade_frac_bl, exp_data=Re_t_bl)
+
+    SU2_DataPlotting(s_normSS, s_normPS, H_SS, H_PS, 
+                 "Shape Factor", string, run_dir, bladeName, mirror_PS=True,
+                 exp_s=blade_frac_bl, exp_data=H_bl)
