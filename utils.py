@@ -13,6 +13,11 @@ from OCC.Core.Geom import Geom_BSplineCurve
 from OCC.Core.gp import gp_Pnt
 from math import log10, sqrt
 import os
+import tkinter as tk
+from tkinter import messagebox
+import time
+
+
 
 plt.rcParams.update({
     "text.usetex": True,
@@ -1106,16 +1111,33 @@ def MISES_DataGather(data, xNorm, y, n):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def launch_paraview_live(run_dir, bladeName, suffix):
-    """Launch the Paraview live visualization script."""
+    """Open the volume VTU file in Paraview once it becomes available."""
+    volume_vtu = run_dir / f"volume_flow_{suffix}_{bladeName}.vtu"
+    while not volume_vtu.exists():
+        time.sleep(1)
+    '''    
+    #"""Open Paraview GUI with the live visualization macro."""
     script_path = Path(__file__).resolve().parent / 'liveParaview_datablade.py'
-    os.environ["PATH"] = ";".join([*os.environ["PATH"].split(";"), "C:\\Program Files\\ParaView-5.12.0-MPI-Windows-Python3.10-msvc2017-AMD64\\bin"])
-    pvpython = shutil.which('pvpython') or shutil.which('pvpython.exe')
-    if pvpython is None:
-        raise FileNotFoundError('pvpython executable not found')
+    paraview = shutil.which('paraview') or shutil.which('paraview.exe')
+    if paraview is None:
+        raise FileNotFoundError('paraview executable not found')
+    #os.environ["PATH"] = ";".join([*os.environ["PATH"].split(";"),"C:\\Program Files\\ParaView-5.12.0-MPI-Windows-Python3.10-msvc2017-AMD64\\bin",])
     subprocess.Popen([
-        pvpython,
-        str(script_path),
+        paraview,
+        f"--script={script_path}",
         str(run_dir),
         bladeName,
         suffix,
-    ])
+    ])'''
+    
+    
+def ask_view_live(blade_name: str) -> bool:
+    """Show a yes/no dialog asking whether to view the live simulation."""
+    root = tk.Tk()
+    root.withdraw()
+    resp = messagebox.askyesno(
+        title="Live simulation",
+        message=f"Would you like to review the live simulation of {blade_name}?",
+    )
+    root.destroy()
+    return resp

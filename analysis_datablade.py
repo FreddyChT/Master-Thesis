@@ -13,6 +13,7 @@ import numpy as np
 import os
 from pathlib import Path
 from datetime import datetime
+import time
 import sys
 import utils
 import mesh_datablade
@@ -228,7 +229,7 @@ def main():
     
     # --- USER INPUTS 
     parser = argparse.ArgumentParser(description="Run blade analysis")
-    parser.add_argument('--blade', default='Blade_24', help='Blade name')
+    parser.add_argument('--blade', default='Blade_1', help='Blade name')
     parser.add_argument('--blades', nargs='+', help='Process multiple blades')
     parser.add_argument('--no_cores', type=int, default=12, help='MPI cores for SU2')
     parser.add_argument('--suffix', default='databladeVALIDATION', help='File name suffix')
@@ -424,7 +425,9 @@ def main():
         mesh_datablade.mesh_datablade()
         configSU2_datablade.configSU2_datablade()
         proc, logf = configSU2_datablade.runSU2_datablade(background=True)
-        utils.launch_paraview_live(run_dir, bladeName, string)
+        if utils.ask_view_live(bladeName):
+            time.sleep(5)
+            utils.launch_paraview_live(run_dir, bladeName, string)
         proc.wait()
         logf.close()
         configSU2_datablade._summarize_su2_log(run_dir / "su2.log")
