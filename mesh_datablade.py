@@ -265,5 +265,3 @@ def mesh_datablade():
     gmsh.write(str(run_dir / f"cascade2D_{string}_{bladeName}.su2"))
     gmsh.finalize()
       
-
-
