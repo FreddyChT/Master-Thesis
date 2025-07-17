@@ -423,6 +423,7 @@ def main():
                             WakeXMin, WakeXMax, WakeYMin, WakeYMax)
         
         mesh_datablade.mesh_datablade()
+        '''
         configSU2_datablade.configSU2_datablade()
         proc, logf = configSU2_datablade.runSU2_datablade(background=True)
         if utils.ask_view_live(bladeName):
@@ -431,7 +432,7 @@ def main():
         proc.wait()
         logf.close()
         configSU2_datablade._summarize_su2_log(run_dir / "su2.log")
-        post_processing_datablade.post_processing_datablade()
+        post_processing_datablade.post_processing_datablade()'''
 
 if __name__ == '__main__':
     main()

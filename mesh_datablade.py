@@ -3,14 +3,15 @@ import numpy as np
 from utils import process_airfoil_file
 
 '''
-bladeFilePath, run_dir, string, bladeName,                           # File management                
-dist_inlet, dist_outlet,                                             # Inlet / outlet definition
-axial_chord, pitch, d_factor,                                        # Geometric parameters          
-sizeCellAirfoil, sizeCellFluid,                                      # Grid element sizes
-nBoundaryPoints, nCellAirfoil, nCellPerimeter,                       # Grid no. elements
-first_layer_height, bl_growth, bl_thickness,                         # BL definition
-size_LE, dist_LE, size_TE, dist_TE,                                  # LE & TE refinement
-VolWAkeIn, VolWAkeOut, WakeXMin, WakeXMax, WakeYMin, WakeYMax        # Wake / airfoil refinement
+bladeFilePath, run_dir, string, bladeName,                          # File management                
+dist_inlet, dist_outlet,                                            # Inlet / outlet definition
+axial_chord, pitch, d_factor,                                       # Geometric parameters          
+sizeCellAirfoil, sizeCellFluid,                                     # Grid element sizes
+nCellAirfoil, nCellPerimeter,                                       # Grid no. elements
+nBoundaryPoints,                                                    # Smoothness of airfoil-like top & bottom boundary lines
+first_layer_height, bl_growth, bl_thickness,                        # BL definition
+size_LE, dist_LE, size_TE, dist_TE,                                 # LE & TE refinement
+VolWAkeIn, VolWAkeOut, WakeXMin, WakeXMax, WakeYMin, WakeYMax       # Wake / airfoil refinement
 '''
 
 def mesh_datablade():

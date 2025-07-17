@@ -82,7 +82,7 @@ def _update_mesh_params(scale: float, axial_chord: float) -> None:
     mesh_datablade.sizeCellAirfoil = 0.02 * axial_chord / scale
     mesh_datablade.nCellAirfoil = max(1, int(549 * scale))
     mesh_datablade.nCellPerimeter = max(1, int(183 * scale))
-    mesh_datablade.nBoundaryPoints = max(2, int(50 * scale))
+    mesh_datablade.nBoundaryPoints = 50 # Only controls smoothness of curved airfoil-like boundary line (no effect on mesh)
 
     configSU2_datablade.sizeCellFluid = mesh_datablade.sizeCellFluid
     configSU2_datablade.sizeCellAirfoil = mesh_datablade.sizeCellAirfoil
