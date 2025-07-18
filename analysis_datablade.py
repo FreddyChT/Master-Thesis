@@ -314,7 +314,7 @@ def main():
         # --- GENERAL MESH PARAMETERS 
         sizeCellFluid = 0.04 * axial_chord
         sizeCellAirfoil = 0.02 * axial_chord
-        nCellAirfoil = 549
+        nCellAirfoil = 300
         nCellPerimeter = 183
         nBoundaryPoints = 50
         
