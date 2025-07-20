@@ -132,10 +132,17 @@ def post_processing_datablade():
     # ── VOLUME solution (needed for BL integrals) ────────────────────────────
     vol_file = run_dir / f"restart_flow_{string}_{bladeName}.csv"
     vol_df   = pd.read_csv(vol_file, sep=',')
-    
+
     # --- Boundary-layer integrals on the whole blade ------------------------
     bl_all = bl_distributions(df, vol_df)
-    
+
+    # --- Total pressure loss at 2 axial chords ------------------------------
+    x_plane = 2.0 * axial_chord
+    loss_df = SU2_total_pressure_loss(vol_df, x_plane, pitch, P01, smooth=True)
+    if loss_df is not None:
+        out_name = f"pressure_loss_{string}_{bladeName}.csv"
+        loss_df.to_csv(run_dir / out_name, index=False)
+
     # split into SS / PS by the same masks returned by SU2_organize -----------
     mask_ss = df.index.isin(dataSS.index)
     mask_ps = df.index.isin(dataPS.index)
@@ -203,8 +210,16 @@ def post_processing_datablade():
         
     
     # field file data extraction
-    
-    
+    if file_nonempty(mises_fieldFile):
+        mises_loss_df = MISES_total_pressure_loss(
+            mises_fieldFile, x_plane, pitch, smooth=True
+        )
+        if mises_loss_df is not None:
+            out_name = f"mises_pressure_loss_{string}_{bladeName}.csv"
+            mises_loss_df.to_csv(run_dir / out_name, index=False)
+    else:
+        mises_loss_df = None
+
     # ─────────────────────────────────────────────────────────────────────────────
     #   RMS VERIFICATION
     # ─────────────────────────────────────────────────────────────────────────────
@@ -228,6 +243,9 @@ def post_processing_datablade():
                 f.write(f"Mach RMS error: {rms:.4f}\n")
         except OSError:
             print(f"[WARNING] Could not append RMS to {summary_file}")
+
+    if loss_df is not None:
+        plot_pressure_loss(loss_df, mises_loss_df, string, run_dir, bladeName)
     
     # ─────────────────────────────────────────────────────────────────────────────
     #   PLOTTING

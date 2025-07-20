@@ -3,7 +3,7 @@ import math
 import shutil
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import CubicSpline, UnivariateSpline
 from scipy.signal import savgol_filter
 from pathlib import Path
 import subprocess
@@ -824,7 +824,100 @@ def SU2_extract_plane_data(df, x_plane, pitch, alpha_m, atol=1e-4):
     
     # Sort by normalized y for clean plots
     sub_df = sub_df.sort_values('y_norm').reset_index(drop=True)
-    return sub_df    
+    return sub_df
+
+def SU2_total_pressure_loss(
+        df,
+        x_plane,
+        pitch,
+        P01,
+        alpha_m=0.0,
+        atol=1e-4,
+        smooth=False,
+        n_points=200,
+        s=1e-4,
+):
+    """Return total pressure loss distribution at a given ``x_plane``.
+
+    The loss coefficient is ``(P01 - P) / P01`` where ``P`` is the static
+    pressure extracted from the ``restart`` solution on the chosen plane.
+
+    ``y`` coordinates are mapped to ``[-0.5, 0.5]`` to account for periodicity.
+
+    Parameters
+    ----------
+    smooth : bool, optional
+        If ``True`` a smoothing spline is fitted and returned on ``n_points``
+        equally spaced samples.
+    n_points : int, optional
+        Number of points for the interpolated curve when ``smooth`` is ``True``.
+    s : float, optional
+        Smoothing factor passed to :class:`UnivariateSpline`.
+    """
+    plane_df = SU2_extract_plane_data(df, x_plane, pitch, alpha_m, atol)
+    if plane_df is None:
+        return None
+
+    plane_df['loss'] = (P01 - plane_df['Pressure']) / P01
+    # remap y/pitch into [-0.5, 0.5] range
+    plane_df['y_norm'] = ((plane_df['y_norm'] + 0.5) % 1.0) - 0.5
+    plane_df = plane_df.sort_values('y_norm').reset_index(drop=True)
+
+    if smooth:
+        x = plane_df['y_norm'].values
+        y = plane_df['loss'].values
+        spl = UnivariateSpline(x, y, s=s)
+        x_i = np.linspace(-0.5, 0.5, n_points)
+        y_i = spl(x_i)
+        return pd.DataFrame({'y_norm': x_i, 'loss': y_i})
+
+    return plane_df[['y_norm', 'loss']]
+
+def MISES_total_pressure_loss(
+        field_file,
+        x_plane,
+        pitch,
+        smooth=False,
+        n_points=200,
+        s=1e-4,
+):
+    """Return total pressure loss from a MISES ``field`` file.
+
+    The file columns are ``x, y, rho/rho0, p/p0, u/a0, v/a0, q/a0, M``.  Each
+    streamtube is separated by blank lines.  ``p/p0`` is interpolated at the
+    chosen ``x_plane`` for each tube and mapped to ``[-0.5, 0.5]`` via the pitch
+    length.
+    """
+    all_x, all_y, _, all_p, *_ = MISES_fieldDataGather(field_file)
+
+    y_vals = []
+    loss_vals = []
+    for x_arr, y_arr, p_arr in zip(all_x, all_y, all_p):
+        if not x_arr:
+            continue
+        if x_plane < min(x_arr) or x_plane > max(x_arr):
+            continue
+        y_val = np.interp(x_plane, x_arr, y_arr)
+        p_norm = np.interp(x_plane, x_arr, p_arr)
+        y_vals.append(y_val / pitch)
+        loss_vals.append(1.0 - p_norm)
+
+    if not loss_vals:
+        return None
+
+    df = pd.DataFrame({'y_norm': y_vals, 'loss': loss_vals})
+    df['y_norm'] = ((df['y_norm'] + 0.5) % 1.0) - 0.5
+    df = df.sort_values('y_norm').reset_index(drop=True)
+
+    if smooth:
+        x = df['y_norm'].values
+        y = df['loss'].values
+        spl = UnivariateSpline(x, y, s=s)
+        x_i = np.linspace(-0.5, 0.5, n_points)
+        y_i = spl(x_i)
+        return pd.DataFrame({'y_norm': x_i, 'loss': y_i})
+
+    return df
 
 def SU2_DataPlotting(
         sSSnorm,    # suction side arc fraction
@@ -862,6 +955,17 @@ def SU2_DataPlotting(
         plt.xlim(0, 1)
     plt.legend(loc='upper left', edgecolor='k', fancybox=False)
     plt.savefig(run_dir / f"non-normalized_{quantity}_{string}_{bladeName}.svg", format='svg', bbox_inches='tight')
+    plt.show()
+
+def plot_pressure_loss(su2_df, mises_df, string, run_dir, bladeName):
+    """Plot total pressure loss distributions from SU2 and MISES."""
+    plt.plot(su2_df['y_norm'], su2_df['loss'], label='SU2')
+    if mises_df is not None:
+        plt.plot(mises_df['y_norm'], mises_df['loss'], label='MISES')
+    plt.xlabel(r'$y/\text{pitch}$')
+    plt.ylabel('Total Pressure Loss')
+    plt.legend(loc='best')
+    plt.savefig(run_dir / f"pressure_loss_{string}_{bladeName}.svg", format='svg', bbox_inches='tight')
     plt.show()
 
 
