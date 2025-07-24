@@ -127,7 +127,7 @@ for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
     
     mod.dist_inlet = dist_inlet
     mod.dist_outlet = dist_outlet
-    mod.x_plane
+    mod.x_plane = x_plane
     mod.sizeCellFluid = sizeCellFluid
     mod.sizeCellAirfoil = sizeCellAirfoil
     mod.nCellAirfoil = nCellAirfoil

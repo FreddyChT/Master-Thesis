@@ -771,6 +771,40 @@ def roll_array(arr, shift):
     """
     return np.concatenate([arr[shift:], arr[:shift]])
 
+def align_pitch(y_norm, values):
+    """Align a pitchwise distribution to the nearest integer multiple.
+
+    Parameters
+    ----------
+    y_norm : array_like
+        Normalised pitch positions.
+    values : array_like
+        Quantity defined at each ``y_norm`` location.
+
+    Returns
+    -------
+    tuple(ndarray, ndarray)
+        ``y_norm`` and ``values`` rotated so the point closest to the nearest
+        integer pitch multiple becomes the first entry. ``y_norm`` is shifted so
+        that this location corresponds to zero.
+    """
+
+    y_arr = np.asarray(y_norm, dtype=float)
+    v_arr = np.asarray(values, dtype=float)
+
+    if y_arr.size == 0:
+        return y_arr, v_arr
+
+    nearest = round(float(np.mean(y_arr)))
+    idx = int(np.argmin(np.abs(y_arr - nearest)))
+
+    y_rot = np.roll(y_arr, -idx) - nearest
+    v_rot = np.roll(v_arr, -idx)
+
+    y_rot -= y_rot[0]
+
+    return y_rot, v_rot
+
 def SU2_organize(df):
     """
     Reorganizes the surface CSV data from SU2 to separate
@@ -871,7 +905,7 @@ def SU2_total_pressure_loss(
     P0_in = P01
     plane_df['loss'] = (P0_in - p0) / P0_in
     # remap y/pitch into [-0.5, 0.5] range
-    plane_df['y_norm'] = ((plane_df['y_norm'] + 0.5) % 1.0) - 0.5
+    plane_df['y_norm'] = ((plane_df['y_norm'] - 0.1) % 1.0) - 0.5
     plane_df = plane_df.sort_values('y_norm').reset_index(drop=True)
 
     if smooth:
@@ -880,9 +914,12 @@ def SU2_total_pressure_loss(
         spl = UnivariateSpline(x, y, s=s)
         x_i = np.linspace(-0.5, 0.5, n_points)
         y_i = spl(x_i)
-        return pd.DataFrame({'y_norm': x_i, 'loss': y_i})
+        out = pd.DataFrame({'y_norm': x_i, 'loss': y_i})
+    else:
+        out = plane_df[['y_norm', 'loss']]
 
-    return plane_df[['y_norm', 'loss']]
+    y_a, v_a = align_pitch(out['y_norm'].values, out['loss'].values)
+    return pd.DataFrame({'y_norm': y_a, 'loss': v_a})
 
 
 def SU2_DataPlotting(
@@ -1132,9 +1169,12 @@ def MISES_total_pressure_loss(
         spl = UnivariateSpline(x, y, s=s)
         x_i = np.linspace(-0.5, 0.5, n_points)
         y_i = spl(x_i)
-        return pd.DataFrame({'y_norm': x_i, 'loss': y_i})
+        out = pd.DataFrame({'y_norm': x_i, 'loss': y_i})
+    else:
+        out = df
 
-    return df
+    y_a, v_a = align_pitch(out['y_norm'].values, out['loss'].values)
+    return pd.DataFrame({'y_norm': y_a, 'loss': v_a})
 
 def MISES_machDataGather(file_path):
     """

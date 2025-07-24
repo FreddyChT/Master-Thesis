@@ -175,7 +175,7 @@ for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
     
     mod.dist_inlet = dist_inlet
     mod.dist_outlet = dist_outlet
-    mod.x_plane
+    mod.x_plane = x_plane
     mod.sizeCellFluid = sizeCellFluid
     mod.sizeCellAirfoil = sizeCellAirfoil
     mod.nCellAirfoil = nCellAirfoil
@@ -330,7 +330,8 @@ def main():
         
         bl = utils.compute_bl_parameters(u2, rho2, mu, axial_chord,
                                          n_layers    = 25,           # keep in sync with gmsh Field[1].thickness
-                                         y_plus_target = 1.0)
+                                         y_plus_target = 1.0,
+                                         x_ref_yplus = 1/n_points)
         
         first_layer_height = bl['first_layer_height']
         bl_growth          = bl['bl_growth']

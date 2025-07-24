@@ -263,13 +263,17 @@ def post_processing_datablade():
     su2_res = SU2_total_pressure_loss(
         vol_df, p_plane, pitch, P01, alpha2, atol=sizeCellFluid/2, smooth=False, n_points=500, s=1e-3)  #order: n_points 10^2 - s 10^-3
     su2_pitch, su2_loss = su2_res['y_norm'], su2_res['loss']
+    su2_pitch, su2_loss = align_pitch(su2_pitch, su2_loss)
+    
     mises_pitch, mises_loss = MISES_plane_total_pressure_loss(
         all_x, all_y, all_p, all_m, p_plane, pitch, P01, tol=1e-2)
+    mises_pitch, mises_loss = align_pitch(mises_pitch, mises_loss)
     
     plt.scatter(su2_pitch, su2_loss, label='SU2', s=0.5)
     if len(mises_pitch):
         plt.scatter(mises_pitch, mises_loss, s=1, color='red', label='MISES')
     plt.xlabel('y/pitch')
+    plt.xlim(-0.6, 0.6)
     plt.ylabel('Total pressure loss')
     plt.legend()
     plt.savefig(run_dir / f"loss_pitch_{string}_{bladeName}.svg", format='svg', bbox_inches='tight')
