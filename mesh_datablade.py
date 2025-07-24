@@ -4,14 +4,14 @@ from utils import process_airfoil_file
 
 '''
 bladeFilePath, run_dir, string, bladeName,                          # File management                
-dist_inlet, dist_outlet,                                            # Inlet / outlet definition
+dist_inlet, dist_outlet, x_plane                                    # Inlet / outlet definition
 axial_chord, pitch, d_factor,                                       # Geometric parameters          
 sizeCellAirfoil, sizeCellFluid,                                     # Grid element sizes
 nCellAirfoil, nCellPerimeter,                                       # Grid no. elements
 nBoundaryPoints,                                                    # Smoothness of airfoil-like top & bottom boundary lines
 first_layer_height, bl_growth, bl_thickness,                        # BL definition
 size_LE, dist_LE, size_TE, dist_TE,                                 # LE & TE refinement
-VolWAkeIn, VolWAkeOut, WakeXMin, WakeXMax, WakeYMin, WakeYMax       # Wake / airfoil refinement
+VolWAkeIn, VolWAkeOut, WakeXMin, WakeXMax                           # Wake / airfoil refinement
 '''
 
 def mesh_datablade():
@@ -224,10 +224,10 @@ def mesh_datablade():
         f.write(f"Field[7].VOut  = { VolWAkeOut };\n")          # background size outside
         # box from just upstream of LE (−0.1·c) to outlet (+dist_outlet·c)
         f.write(f"Field[7].XMin  = { WakeXMin };\n")
-        f.write(f"Field[7].XMax  = { x15002 - 0.5 * axial_chord };\n")
+        f.write(f"Field[7].XMax  = { WakeXMax };\n")
         # full pitch height, centered on camber line (y=0)
-        f.write(f"Field[7].YMin  = { -y15002 };\n")
-        f.write(f"Field[7].YMax  = { y15002 };\n")
+        f.write(f"Field[7].YMin  = { -max(abs(y15001), abs(y15002)) };\n")
+        f.write(f"Field[7].YMax  = { max(abs(y15001), abs(y15002)) };\n")
         # flat 2D mesh
         f.write("Field[7].ZMin  = 0;\n")
         f.write("Field[7].ZMax  = 0;\n")

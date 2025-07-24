@@ -1,0 +1,1867 @@
+
+-------------------------------------------------------------------------
+|    ___ _   _ ___                                                      |
+|   / __| | | |_  )   Release 8.0.1 "Harrier"                           |
+|   \__ \ |_| |/ /                                                      |
+|   |___/\___//___|   Suite (Computational Fluid Dynamics Code)         |
+|                                                                       |
+-------------------------------------------------------------------------
+| SU2 Project Website: https://su2code.github.io                        |
+|                                                                       |
+| The SU2 Project is maintained by the SU2 Foundation                   |
+| (http://su2foundation.org)                                            |
+-------------------------------------------------------------------------
+| Copyright 2012-2024, SU2 Contributors                                 |
+|                                                                       |
+| SU2 is free software; you can redistribute it and/or                  |
+| modify it under the terms of the GNU Lesser General Public            |
+| License as published by the Free Software Foundation; either          |
+| version 2.1 of the License, or (at your option) any later version.    |
+|                                                                       |
+| SU2 is distributed in the hope that it will be useful,                |
+| but WITHOUT ANY WARRANTY; without even the implied warranty of        |
+| MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU      |
+| Lesser General Public License for more details.                       |
+|                                                                       |
+| You should have received a copy of the GNU Lesser General Public      |
+| License along with SU2. If not, see <http://www.gnu.org/licenses/>.   |
+-------------------------------------------------------------------------
+
+Parsing config file for zone 0
+
+----------------- Physical Case Definition ( Zone 0 ) -------------------
+Compressible RANS equations.
+Turbulence model: Spalart-Allmaras-noft2-BCM
+Hybrid RANS/LES: No Hybrid RANS/LES
+Mach number: 0.5.
+Angle of attack (AoA): -40 deg, and angle of sideslip (AoS): 0 deg.
+Reynolds number: 600000. Reference length 1.0014.
+No restart solution, use the values at infinity (freestream).
+Dimensional simulation.
+The reference area will be computed using y(2D) or z(3D) projection.
+The semi-span will be computed using the max y(3D) value.
+The reference length is 1.0014 m.
+Reference origin for moment evaluation is (0, 0, 0).
+Surface(s) where the force coefficients are evaluated: blade1.
+
+Surface(s) plotted in the output file: blade1.
+Surface(s) to be analyzed in detail: inlet, outlet, blade1.
+Input mesh file name: cascade2D_databladeVALIDATION_Blade_2.su2
+
+--------------- Space Numerical Integration ( Zone 0 ) ------------------
+Jameson-Schmidt-Turkel scheme (2nd order in space) for the flow inviscid terms.
+JST viscous coefficients (2nd & 4th): 0.5, 0.02.
+The method includes a grid stretching correction (p = 0.3).
+Scalar upwind solver for the turbulence model.
+First order integration in space.
+Average of gradients with correction (viscous flow terms).
+Average of gradients with correction (viscous turbulence terms).
+Gradient for upwind reconstruction: inverse-distance weighted Least-Squares.
+Gradient for viscous and source terms: inverse-distance weighted Least-Squares.
+
+--------------- Time Numerical Integration  ( Zone 0 ) ------------------
+Local time stepping (steady state simulation).
+Euler implicit method for the flow equations.
+FGMRES is used for solving the linear system.
+Using a LU-SGS preconditioning.
+Convergence criteria of the linear solver: 0.0001.
+Max number of linear iterations: 10.
+V Multigrid Cycle, with 3 multigrid levels.
+Damping factor for the residual restriction: 0.75.
+Damping factor for the correction prolongation: 0.75.
+CFL adaptation. Factor down: 0.1, factor up: 1.2,
+                lower limit: 0.1, upper limit: 100,
+                acceptable linear residual: 0.001.
++-------------------------------------------+
+|  MG Level| Presmooth|PostSmooth|CorrectSmo|
++-------------------------------------------+
+|         0|         1|         0|         1|
+|         1|         2|         2|         2|
+|         2|         3|         3|         3|
+|         3|         3|         0|         0|
++-------------------------------------------+
+Courant-Friedrichs-Lewy number:       12
+Euler implicit time integration for the turbulence model.
+
+------------------ Convergence Criteria  ( Zone 0 ) ---------------------
+Maximum number of solver subiterations: 7000.
+Begin convergence monitoring at iteration 500.
+Residual minimum value: 1e-7.
+Cauchy series min. value: 1e-10.
+Number of Cauchy elements: 100.
+Begin windowed time average at iteration 0.
+
+-------------------- Output Information ( Zone 0 ) ----------------------
+File writing frequency: 
++------------------------------------+
+|                     File| Frequency|
++------------------------------------+
+|                  RESTART|        50|
+|                 PARAVIEW|        50|
+|         SURFACE_PARAVIEW|        50|
+|                      CSV|        50|
+|              SURFACE_CSV|        50|
++------------------------------------+
+Writing the convergence history file every 1 inner iterations.
+Writing the screen convergence history every 10 inner iterations.
+The tabular file format is CSV (.csv).
+Convergence history file name: history_databladeVALIDATION_Blade_2.
+Forces breakdown file name: forces_breakdown.dat.
+Surface file name: surface_flowdatabladeVALIDATION_Blade_2.
+Volume file name: volume_flow_databladeVALIDATION_Blade_2.
+Restart file name: restart_flow_databladeVALIDATION_Blade_2.dat.
+
+------------- Config File Boundary Information ( Zone 0 ) ---------------
++-----------------------------------------------------------------------+
+|                        Marker Type|                        Marker Name|
++-----------------------------------------------------------------------+
+|                  Periodic boundary|               symmetricWallsBOTTOM|
+|                                   |                  symmetricWallsTOP|
++-----------------------------------------------------------------------+
+|                     Inlet boundary|                              inlet|
++-----------------------------------------------------------------------+
+|                    Outlet boundary|                             outlet|
++-----------------------------------------------------------------------+
+|                     Heat flux wall|                             blade1|
+|                                   |                             blade2|
++-----------------------------------------------------------------------+
+
+-------------------- Output Preprocessing ( Zone 0 ) --------------------
+  Info: Ignoring the following screen output fields:
+  LINSOL_ITER_TRANS, LINSOL_RESIDUAL_TRANS
+Screen output fields: INNER_ITER, CUR_TIME, RMS_DENSITY
+  Info: Ignoring the following history output groups:
+  RMS_TKE, RMS_DISSIPATION
+History output group(s): INNER_ITER, WALL_TIME, RMS_DENSITY, RMS_MOMENTUM-X, RMS_ENERGY, LINSOL, CFL_NUMBER, FLOW_COEFF_SURF, AERO_COEFF_SURF
+Convergence field(s): RMS_DENSITY
+Warning: No (valid) fields chosen for time convergence monitoring. Time convergence monitoring inactive.
+Volume output fields: COORDINATES, SOLUTION, PRIMITIVE, RESIDUAL, TIMESTEP, MESH_QUALITY, VORTEX_IDENTIFICATION
+
+------------------- Geometry Preprocessing ( Zone 0 ) -------------------
+Two dimensional problem.
+38509 grid points before partitioning.
+60102 volume elements before partitioning.
+5 surface markers.
+27 boundary elements in index 0 (Marker = inlet).
+331 boundary elements in index 1 (Marker = symmetricWallsBOTTOM).
+331 boundary elements in index 2 (Marker = symmetricWallsTOP).
+27 boundary elements in index 3 (Marker = outlet).
+648 boundary elements in index 4 (Marker = blade1).
+Executing the partitioning functions.
+Building the graph adjacency structure.
+Calling ParMETIS... graph partitioning complete (1293 edge cuts).
+Distributing ParMETIS coloring.
+Rebalancing vertices.
+Rebalancing volume element connectivity.
+Rebalancing markers and surface elements.
+40127 vertices including ghost points. 
+61383 interior elements including halo cells. 
+45520 triangles.
+15863 quadrilaterals.
+Establishing MPI communication patterns.
+Setting point connectivity.
+Renumbering points (Reverse Cuthill McKee Ordering).
+Recomputing point connectivity.
+Setting element connectivity.
+Checking the numerical grid orientation.
+All volume elements are correctly orientend.
+There has been a re-orientation of 693 LINE surface elements.
+Identifying edges and vertices.
+Setting the control volume structure.
+Area of the computational grid: 3.60911.
+Searching for the closest normal neighbors to the surfaces.
+Storing a mapping from global to local point index.
+Compute the surface curvature.
+Max K: 103.642. Mean K: 3.21321. Standard deviation K: 12.4386.
+Checking for periodicity.
+WARNING: Periodicity has been detected. Disabling multigrid. 
+Computing mesh quality statistics for the dual control volumes.
++--------------------------------------------------------------+
+|           Mesh Quality Metric|        Minimum|        Maximum|
++--------------------------------------------------------------+
+|    Orthogonality Angle (deg.)|        46.0795|             90|
+|     CV Face Area Aspect Ratio|        1.00045|        548.875|
+|           CV Sub-Volume Ratio|              1|        12.5109|
++--------------------------------------------------------------+
+Finding max control volume width.
+Communicating number of neighbors.
+Reference length = 1.02031 m.
+Wetted area = 3.00136 m.
+Area projection in the x-plane = 0.93857 m, y-plane = 1.02031 m.
+Max. coordinate in the x-direction = 1.0133 m, y-direction = 0.616834 m.
+Min. coordinate in the x-direction = -0.00703271 m, y-direction = -0.303166 m.
+Matching the periodic boundary points for marker pair 1.
+ Matched 664 points with a max distance of: 1.60702e-13.
+Computing wall distances.
+
+-------------------- Solver Preprocessing ( Zone 0 ) --------------------
+Viscous flow: Computing pressure using the ideal gas law
+based on the free-stream temperature and a density computed
+from the Reynolds number.
+Force coefficients computed using free-stream values.
+
+-- Models:
++------------------------------------------------------------------------------+
+|          Viscosity Model|        Conductivity Model|              Fluid Model|
++------------------------------------------------------------------------------+
+|               SUTHERLAND|          CONSTANT_PRANDTL|                IDEAL_GAS|
++------------------------------------------------------------------------------+
+-- Fluid properties:
++------------------------------------------------------------------------------+
+|                  Name|    Dim. value|    Ref. value|      Unit|Non-dim. value|
++------------------------------------------------------------------------------+
+|        Ref. Viscosity|     1.716e-05|             1|   N.s/m^2|     1.716e-05|
+|      Sutherland Temp.|        273.15|             1|         K|        273.15|
+|     Sutherland Const.|         110.4|             1|         K|         110.4|
++------------------------------------------------------------------------------+
+|        Prandtl (Lam.)|             -|             -|         -|          0.72|
+|       Prandtl (Turb.)|             -|             -|         -|           0.9|
++------------------------------------------------------------------------------+
+|          Gas Constant|       287.058|             1|  N.m/kg.K|       287.058|
+|      Spec. Heat Ratio|             -|             -|         -|           1.4|
++------------------------------------------------------------------------------+
+-- Initial and free-stream conditions:
++------------------------------------------------------------------------------+
+|                  Name|    Dim. value|    Ref. value|      Unit|Non-dim. value|
++------------------------------------------------------------------------------+
+|       Static Pressure|       5486.16|             1|        Pa|       5486.16|
+|               Density|     0.0637056|             1|    kg/m^3|     0.0637056|
+|           Temperature|           300|             1|         K|           300|
+|          Total Energy|        230364|             1|   m^2/s^2|        230364|
+|            Velocity-X|       132.994|             1|       m/s|       132.994|
+|            Velocity-Y|      -111.596|             1|       m/s|      -111.596|
+|    Velocity Magnitude|       173.612|             1|       m/s|       173.612|
++------------------------------------------------------------------------------+
+|             Viscosity|   1.84592e-05|             1|   N.s/m^2|   1.84592e-05|
+|          Conductivity|             -|             1|   W/m^2.K|             -|
+|     Turb. Kin. Energy|       55.3843|             1|   m^2/s^2|       55.3843|
+|     Spec. Dissipation|    1.9114e+06|             1|       1/s|    1.9114e+06|
++------------------------------------------------------------------------------+
+|           Mach Number|             -|             -|         -|           0.5|
+|       Reynolds Number|             -|             -|         -|        600000|
++------------------------------------------------------------------------------+
+Initialize Jacobian structure (Navier-Stokes). MG level: 0.
+Initialize Jacobian structure (SA model).
+
+------------------- Numerics Preprocessing ( Zone 0 ) -------------------
+
+----------------- Integration Preprocessing ( Zone 0 ) ------------------
+
+------------------- Iteration Preprocessing ( Zone 0 ) ------------------
+Euler/Navier-Stokes/RANS fluid iteration.
+
+------------------------------ Begin Solver -----------------------------
+
+Simulation Run using the Single-zone Driver
+WARNING: SU2 was not compiled for an AVX-capable architecture. Performance could be better,
+         see https://su2code.github.io/docs_v7/Build-SU2-Linux-MacOS/#compiler-optimizations
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|           0|  0.0000e+00|   -2.233823|
+|          10|  0.0000e+00|   -2.906515|
+|          20|  0.0000e+00|   -2.784640|
+|          30|  0.0000e+00|   -2.701963|
+|          40|  0.0000e+00|   -2.738009|
+|          50|  0.0000e+00|   -2.851494|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8167.27 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (710.532 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (66.6982 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (21.1447 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (16.2257 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|          60|  0.0000e+00|   -2.839452|
+|          70|  0.0000e+00|   -2.876221|
+|          80|  0.0000e+00|   -2.857931|
+|          90|  0.0000e+00|   -2.806740|
+|         100|  0.0000e+00|   -2.969436|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8978.38 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (690.672 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (58.5632 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (20.7949 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.9753 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         110|  0.0000e+00|   -2.944688|
+|         120|  0.0000e+00|   -2.930139|
+|         130|  0.0000e+00|   -2.933343|
+|         140|  0.0000e+00|   -2.952490|
+|         150|  0.0000e+00|   -2.952470|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (312.147 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (213.075 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (62.6053 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.0312 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (5.97871 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         160|  0.0000e+00|   -2.966265|
+|         170|  0.0000e+00|   -2.999184|
+|         180|  0.0000e+00|   -3.045964|
+|         190|  0.0000e+00|   -3.035405|
+|         200|  0.0000e+00|   -3.053260|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (7301.45 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (644.383 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (46.6158 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.4124 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (16.5015 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         210|  0.0000e+00|   -3.090535|
+|         220|  0.0000e+00|   -3.050557|
+|         230|  0.0000e+00|   -2.996480|
+|         240|  0.0000e+00|   -3.015034|
+|         250|  0.0000e+00|   -3.023277|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (1961.86 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (424.186 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (10.0958 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.8903 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (17.9353 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         260|  0.0000e+00|   -3.070797|
+|         270|  0.0000e+00|   -3.079799|
+|         280|  0.0000e+00|   -3.118154|
+|         290|  0.0000e+00|   -3.084503|
+|         300|  0.0000e+00|   -2.992831|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (9307.56 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (691.767 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (59.1277 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.1221 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (14.7561 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         310|  0.0000e+00|   -3.121279|
+|         320|  0.0000e+00|   -3.073338|
+|         330|  0.0000e+00|   -2.833988|
+|         340|  0.0000e+00|   -3.005020|
+|         350|  0.0000e+00|   -3.057002|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (7771.34 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (510.109 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                      (55.185 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.8344 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (15.6676 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         360|  0.0000e+00|   -2.821871|
+|         370|  0.0000e+00|   -2.892423|
+|         380|  0.0000e+00|   -3.100231|
+|         390|  0.0000e+00|   -3.008043|
+|         400|  0.0000e+00|   -3.192711|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (9022.14 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (674.547 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (59.0497 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.6463 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (17.8784 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         410|  0.0000e+00|   -3.148745|
+|         420|  0.0000e+00|   -3.186214|
+|         430|  0.0000e+00|   -3.422472|
+|         440|  0.0000e+00|   -3.345636|
+|         450|  0.0000e+00|   -3.437142|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (4614.13 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (637.012 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (45.7328 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.3845 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (15.6495 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         460|  0.0000e+00|   -3.503405|
+|         470|  0.0000e+00|   -3.499481|
+|         480|  0.0000e+00|   -3.597220|
+|         490|  0.0000e+00|   -3.510786|
+|         500|  0.0000e+00|   -3.582379|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8418.53 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (708.945 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (52.7562 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.6028 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                      (15.735 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         510|  0.0000e+00|   -3.659538|
+|         520|  0.0000e+00|   -3.477426|
+|         530|  0.0000e+00|   -3.520572|
+|         540|  0.0000e+00|   -3.601619|
+|         550|  0.0000e+00|   -3.518546|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (9084.14 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                       (712.7 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (55.4283 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.0261 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (14.3969 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         560|  0.0000e+00|   -3.391472|
+|         570|  0.0000e+00|   -3.544381|
+|         580|  0.0000e+00|   -3.625098|
+|         590|  0.0000e+00|   -3.481109|
+|         600|  0.0000e+00|   -3.470755|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8802.91 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (721.186 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (58.7759 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (17.3582 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (7.13395 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         610|  0.0000e+00|   -3.627573|
+|         620|  0.0000e+00|   -3.444868|
+|         630|  0.0000e+00|   -3.538781|
+|         640|  0.0000e+00|   -3.670477|
+|         650|  0.0000e+00|   -3.520859|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                      (6643.4 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (401.765 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (20.2751 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (17.9838 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (14.2591 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         660|  0.0000e+00|   -3.427266|
+|         670|  0.0000e+00|   -3.731408|
+|         680|  0.0000e+00|   -3.641293|
+|         690|  0.0000e+00|   -3.415253|
+|         700|  0.0000e+00|   -3.575685|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (7915.16 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (402.618 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                      (18.212 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                       (19.58 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (15.4044 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         710|  0.0000e+00|   -3.724161|
+|         720|  0.0000e+00|   -3.608998|
+|         730|  0.0000e+00|   -3.473711|
+|         740|  0.0000e+00|   -3.668121|
+|         750|  0.0000e+00|   -3.646661|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (5778.33 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (160.865 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (21.7682 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.7821 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (17.4727 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         760|  0.0000e+00|   -3.506834|
+|         770|  0.0000e+00|   -3.572727|
+|         780|  0.0000e+00|   -3.884355|
+|         790|  0.0000e+00|   -3.824468|
+|         800|  0.0000e+00|   -3.940451|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8094.53 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (692.604 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (61.3899 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.4842 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (14.5339 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         810|  0.0000e+00|   -4.151864|
+|         820|  0.0000e+00|   -4.130751|
+|         830|  0.0000e+00|   -4.028637|
+|         840|  0.0000e+00|   -4.192149|
+|         850|  0.0000e+00|   -4.337286|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                      (8104.2 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (528.713 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (45.1773 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.0511 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                      (12.939 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         860|  0.0000e+00|   -4.237448|
+|         870|  0.0000e+00|   -4.238722|
+|         880|  0.0000e+00|   -4.367635|
+|         890|  0.0000e+00|   -4.401201|
+|         900|  0.0000e+00|   -4.233137|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8270.11 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (618.956 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                      (60.857 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (17.8211 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (15.6296 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         910|  0.0000e+00|   -4.331037|
+|         920|  0.0000e+00|   -4.483750|
+|         930|  0.0000e+00|   -4.373957|
+|         940|  0.0000e+00|   -4.390501|
+|         950|  0.0000e+00|   -4.539698|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (4921.05 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (541.681 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (50.5372 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.0876 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (15.9973 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|         960|  0.0000e+00|   -4.533758|
+|         970|  0.0000e+00|   -4.389811|
+|         980|  0.0000e+00|   -4.465750|
+|         990|  0.0000e+00|   -4.626629|
+|        1000|  0.0000e+00|   -4.576758|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                      (1660.8 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (76.9265 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (2.87176 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.1269 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.8897 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1010|  0.0000e+00|   -4.517059|
+|        1020|  0.0000e+00|   -4.676513|
+|        1030|  0.0000e+00|   -4.717702|
+|        1040|  0.0000e+00|   -4.639754|
+|        1050|  0.0000e+00|   -4.734364|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8527.84 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (742.677 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (62.2695 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.2367 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (12.7318 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1060|  0.0000e+00|   -4.872143|
+|        1070|  0.0000e+00|   -4.838303|
+|        1080|  0.0000e+00|   -4.770422|
+|        1090|  0.0000e+00|   -4.924398|
+|        1100|  0.0000e+00|   -4.964096|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (5500.75 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (655.944 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                      (62.903 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (20.0972 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.5073 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1110|  0.0000e+00|   -4.883226|
+|        1120|  0.0000e+00|   -4.875921|
+|        1130|  0.0000e+00|   -5.033410|
+|        1140|  0.0000e+00|   -5.030947|
+|        1150|  0.0000e+00|   -4.968751|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                        (8865 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (602.867 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (50.5759 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.3901 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (15.2567 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1160|  0.0000e+00|   -5.116598|
+|        1170|  0.0000e+00|   -5.090275|
+|        1180|  0.0000e+00|   -4.991651|
+|        1190|  0.0000e+00|   -5.024175|
+|        1200|  0.0000e+00|   -5.120381|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8333.07 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (651.811 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (38.4189 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (20.3737 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (17.9529 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1210|  0.0000e+00|   -5.008844|
+|        1220|  0.0000e+00|   -5.147690|
+|        1230|  0.0000e+00|   -5.077682|
+|        1240|  0.0000e+00|   -5.177937|
+|        1250|  0.0000e+00|   -5.198262|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (7692.07 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (760.512 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                      (55.491 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                      (20.257 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.2542 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1260|  0.0000e+00|   -5.163568|
+|        1270|  0.0000e+00|   -5.236436|
+|        1280|  0.0000e+00|   -5.277379|
+|        1290|  0.0000e+00|   -5.202193|
+|        1300|  0.0000e+00|   -5.262485|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (9105.26 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (724.817 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                      (53.994 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (20.1936 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.1931 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1310|  0.0000e+00|   -5.383658|
+|        1320|  0.0000e+00|   -5.306210|
+|        1330|  0.0000e+00|   -5.295118|
+|        1340|  0.0000e+00|   -5.346605|
+|        1350|  0.0000e+00|   -5.367156|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (9466.83 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (787.377 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (62.3538 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.5847 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (16.6838 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1360|  0.0000e+00|   -5.287988|
+|        1370|  0.0000e+00|   -5.322054|
+|        1380|  0.0000e+00|   -5.345498|
+|        1390|  0.0000e+00|   -5.240661|
+|        1400|  0.0000e+00|   -5.395824|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (5778.66 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (639.603 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (44.7586 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (16.8987 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (12.8384 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1410|  0.0000e+00|   -5.386894|
+|        1420|  0.0000e+00|   -5.441789|
+|        1430|  0.0000e+00|   -5.459866|
+|        1440|  0.0000e+00|   -5.422783|
+|        1450|  0.0000e+00|   -5.384362|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (162.934 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (6.96816 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (10.0706 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (15.0723 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (9.14517 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1460|  0.0000e+00|   -5.398767|
+|        1470|  0.0000e+00|   -5.352358|
+|        1480|  0.0000e+00|   -5.386585|
+|        1490|  0.0000e+00|   -5.440222|
+|        1500|  0.0000e+00|   -5.418038|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (5585.56 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (252.623 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (11.4366 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (12.2629 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (9.53086 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1510|  0.0000e+00|   -5.441855|
+|        1520|  0.0000e+00|   -5.477813|
+|        1530|  0.0000e+00|   -5.505765|
+|        1540|  0.0000e+00|   -5.510447|
+|        1550|  0.0000e+00|   -5.516722|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (815.876 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (77.4926 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (1.61665 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (12.5645 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (7.48126 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1560|  0.0000e+00|   -5.541592|
+|        1570|  0.0000e+00|   -5.540430|
+|        1580|  0.0000e+00|   -5.535430|
+|        1590|  0.0000e+00|   -5.567704|
+|        1600|  0.0000e+00|   -5.600706|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (2463.68 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (177.464 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (7.27816 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (14.7119 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (11.5374 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1610|  0.0000e+00|   -5.551429|
+|        1620|  0.0000e+00|   -5.646940|
+|        1630|  0.0000e+00|   -5.660304|
+|        1640|  0.0000e+00|   -5.649959|
+|        1650|  0.0000e+00|   -5.697246|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (3230.42 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (327.343 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (31.0991 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (14.3531 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                      (13.046 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1660|  0.0000e+00|   -5.714492|
+|        1670|  0.0000e+00|   -5.688597|
+|        1680|  0.0000e+00|   -5.682529|
+|        1690|  0.0000e+00|   -5.660666|
+|        1700|  0.0000e+00|   -5.640529|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (339.695 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (12.6036 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (1.98724 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (12.3439 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (7.27365 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1710|  0.0000e+00|   -5.660914|
+|        1720|  0.0000e+00|   -5.692360|
+|        1730|  0.0000e+00|   -5.627885|
+|        1740|  0.0000e+00|   -5.729602|
+|        1750|  0.0000e+00|   -5.751257|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                       (837.6 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (421.923 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (33.3586 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (13.9087 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (8.03826 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1760|  0.0000e+00|   -5.740694|
+|        1770|  0.0000e+00|   -5.766372|
+|        1780|  0.0000e+00|   -5.804915|
+|        1790|  0.0000e+00|   -5.820285|
+|        1800|  0.0000e+00|   -5.768059|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (985.048 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (167.944 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (15.9938 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (13.6605 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (9.86209 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1810|  0.0000e+00|   -5.766969|
+|        1820|  0.0000e+00|   -5.821687|
+|        1830|  0.0000e+00|   -5.855818|
+|        1840|  0.0000e+00|   -5.838126|
+|        1850|  0.0000e+00|   -5.847300|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (406.704 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (70.5965 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (4.41966 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (13.9939 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (9.03595 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1860|  0.0000e+00|   -5.891932|
+|        1870|  0.0000e+00|   -5.906167|
+|        1880|  0.0000e+00|   -5.846866|
+|        1890|  0.0000e+00|   -5.937730|
+|        1900|  0.0000e+00|   -5.931093|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (709.198 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (124.923 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (6.31298 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (13.6228 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (9.42776 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1910|  0.0000e+00|   -5.895663|
+|        1920|  0.0000e+00|   -5.944078|
+|        1930|  0.0000e+00|   -5.977240|
+|        1940|  0.0000e+00|   -5.937559|
+|        1950|  0.0000e+00|   -5.883059|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (726.492 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (261.168 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (12.7951 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (13.7732 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (9.58257 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        1960|  0.0000e+00|   -5.951852|
+|        1970|  0.0000e+00|   -5.926234|
+|        1980|  0.0000e+00|   -5.863059|
+|        1990|  0.0000e+00|   -5.915538|
+|        2000|  0.0000e+00|   -5.926007|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                      (7953.5 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (701.017 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (67.5213 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (16.2467 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (8.60045 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2010|  0.0000e+00|   -5.893441|
+|        2020|  0.0000e+00|   -5.935600|
+|        2030|  0.0000e+00|   -5.975356|
+|        2040|  0.0000e+00|   -5.969432|
+|        2050|  0.0000e+00|   -5.900474|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (7744.74 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (432.847 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (3.97029 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.8153 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (14.1332 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2060|  0.0000e+00|   -5.949120|
+|        2070|  0.0000e+00|   -5.945906|
+|        2080|  0.0000e+00|   -5.886865|
+|        2090|  0.0000e+00|   -5.867254|
+|        2100|  0.0000e+00|   -5.953175|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (5741.83 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (714.559 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                      (60.429 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.6451 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                      (18.437 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2110|  0.0000e+00|   -5.915608|
+|        2120|  0.0000e+00|   -5.906410|
+|        2130|  0.0000e+00|   -5.971288|
+|        2140|  0.0000e+00|   -6.000535|
+|        2150|  0.0000e+00|   -5.975016|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8198.84 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (753.016 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (57.0156 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.5012 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                       (12.59 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2160|  0.0000e+00|   -5.948201|
+|        2170|  0.0000e+00|   -6.016949|
+|        2180|  0.0000e+00|   -5.993908|
+|        2190|  0.0000e+00|   -5.937990|
+|        2200|  0.0000e+00|   -5.973644|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (7258.76 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (692.178 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (62.7163 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.8574 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.2724 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2210|  0.0000e+00|   -6.033323|
+|        2220|  0.0000e+00|   -5.951887|
+|        2230|  0.0000e+00|   -5.968364|
+|        2240|  0.0000e+00|   -6.052348|
+|        2250|  0.0000e+00|   -6.051547|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8243.33 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                      (726.68 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                      (55.171 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.1388 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.5622 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2260|  0.0000e+00|   -5.998985|
+|        2270|  0.0000e+00|   -6.001731|
+|        2280|  0.0000e+00|   -6.087719|
+|        2290|  0.0000e+00|   -6.062401|
+|        2300|  0.0000e+00|   -6.014510|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (459.426 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (716.774 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (22.1922 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                      (20.022 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (16.8238 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2310|  0.0000e+00|   -6.061737|
+|        2320|  0.0000e+00|   -6.120926|
+|        2330|  0.0000e+00|   -6.042976|
+|        2340|  0.0000e+00|   -6.056553|
+|        2350|  0.0000e+00|   -6.140384|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8649.57 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (699.374 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (67.7921 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (20.0798 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (17.3507 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2360|  0.0000e+00|   -6.131216|
+|        2370|  0.0000e+00|   -6.028579|
+|        2380|  0.0000e+00|   -6.134235|
+|        2390|  0.0000e+00|   -6.147904|
+|        2400|  0.0000e+00|   -6.099252|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (5627.87 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (610.488 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (59.7455 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.7118 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (15.2859 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2410|  0.0000e+00|   -6.112081|
+|        2420|  0.0000e+00|   -6.199941|
+|        2430|  0.0000e+00|   -6.208512|
+|        2440|  0.0000e+00|   -6.132825|
+|        2450|  0.0000e+00|   -6.207420|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (2066.19 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (493.049 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (8.04732 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.1342 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.1721 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2460|  0.0000e+00|   -6.250433|
+|        2470|  0.0000e+00|   -6.208825|
+|        2480|  0.0000e+00|   -6.133110|
+|        2490|  0.0000e+00|   -6.259910|
+|        2500|  0.0000e+00|   -6.255868|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (1695.65 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (597.517 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (11.0572 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (20.0084 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.4683 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2510|  0.0000e+00|   -6.199942|
+|        2520|  0.0000e+00|   -6.218531|
+|        2530|  0.0000e+00|   -6.304433|
+|        2540|  0.0000e+00|   -6.264493|
+|        2550|  0.0000e+00|   -6.263920|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (883.086 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (90.5054 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (55.6942 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (17.0783 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (17.9129 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2560|  0.0000e+00|   -6.353317|
+|        2570|  0.0000e+00|   -6.340137|
+|        2580|  0.0000e+00|   -6.284168|
+|        2590|  0.0000e+00|   -6.339678|
+|        2600|  0.0000e+00|   -6.364610|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (7529.35 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (704.574 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (63.2272 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.9321 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (15.7329 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2610|  0.0000e+00|   -6.327431|
+|        2620|  0.0000e+00|   -6.301882|
+|        2630|  0.0000e+00|   -6.410918|
+|        2640|  0.0000e+00|   -6.359506|
+|        2650|  0.0000e+00|   -6.350738|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8038.28 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (731.222 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (62.3947 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.4256 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (13.9929 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2660|  0.0000e+00|   -6.433247|
+|        2670|  0.0000e+00|   -6.425205|
+|        2680|  0.0000e+00|   -6.396794|
+|        2690|  0.0000e+00|   -6.417565|
+|        2700|  0.0000e+00|   -6.479304|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (7030.65 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (673.383 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (51.2956 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.9973 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (16.9929 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2710|  0.0000e+00|   -6.440958|
+|        2720|  0.0000e+00|   -6.437088|
+|        2730|  0.0000e+00|   -6.510599|
+|        2740|  0.0000e+00|   -6.515815|
+|        2750|  0.0000e+00|   -6.439397|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (591.646 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (311.703 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (17.0554 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.0829 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                      (16.948 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2760|  0.0000e+00|   -6.516665|
+|        2770|  0.0000e+00|   -6.535960|
+|        2780|  0.0000e+00|   -6.506328|
+|        2790|  0.0000e+00|   -6.501323|
+|        2800|  0.0000e+00|   -6.569004|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (1520.45 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (609.326 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (30.1648 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.4626 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.0191 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2810|  0.0000e+00|   -6.583848|
+|        2820|  0.0000e+00|   -6.542529|
+|        2830|  0.0000e+00|   -6.580894|
+|        2840|  0.0000e+00|   -6.629458|
+|        2850|  0.0000e+00|   -6.616184|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (6437.54 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (640.871 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (38.4801 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.9175 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                      (18.451 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2860|  0.0000e+00|   -6.562784|
+|        2870|  0.0000e+00|   -6.650168|
+|        2880|  0.0000e+00|   -6.640862|
+|        2890|  0.0000e+00|   -6.606630|
+|        2900|  0.0000e+00|   -6.636515|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (6284.92 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (353.706 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (11.6216 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.1251 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                      (16.837 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2910|  0.0000e+00|   -6.683243|
+|        2920|  0.0000e+00|   -6.677963|
+|        2930|  0.0000e+00|   -6.629168|
+|        2940|  0.0000e+00|   -6.711962|
+|        2950|  0.0000e+00|   -6.720271|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (6249.81 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (218.887 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (27.3928 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.5883 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (17.4189 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        2960|  0.0000e+00|   -6.700370|
+|        2970|  0.0000e+00|   -6.695071|
+|        2980|  0.0000e+00|   -6.741370|
+|        2990|  0.0000e+00|   -6.732525|
+|        3000|  0.0000e+00|   -6.701690|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (1391.16 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (670.325 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                      (53.382 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.4119 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (16.6734 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        3010|  0.0000e+00|   -6.766073|
+|        3020|  0.0000e+00|   -6.777117|
+|        3030|  0.0000e+00|   -6.764535|
+|        3040|  0.0000e+00|   -6.756260|
+|        3050|  0.0000e+00|   -6.798708|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (4993.22 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (655.175 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (66.2422 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (17.8916 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                      (12.498 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        3060|  0.0000e+00|   -6.798887|
+|        3070|  0.0000e+00|   -6.779293|
+|        3080|  0.0000e+00|   -6.811890|
+|        3090|  0.0000e+00|   -6.820733|
+|        3100|  0.0000e+00|   -6.818515|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (7497.74 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (638.836 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (61.6562 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.9422 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.7332 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        3110|  0.0000e+00|   -6.832197|
+|        3120|  0.0000e+00|   -6.852749|
+|        3130|  0.0000e+00|   -6.855248|
+|        3140|  0.0000e+00|   -6.834060|
+|        3150|  0.0000e+00|   -6.870765|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (7747.69 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (645.127 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (59.0887 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.5702 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.9054 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        3160|  0.0000e+00|   -6.868725|
+|        3170|  0.0000e+00|   -6.862520|
+|        3180|  0.0000e+00|   -6.871136|
+|        3190|  0.0000e+00|   -6.889088|
+|        3200|  0.0000e+00|   -6.892833|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8818.16 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (667.819 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                      (52.643 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.3904 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.0269 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        3210|  0.0000e+00|   -6.882608|
+|        3220|  0.0000e+00|   -6.901789|
+|        3230|  0.0000e+00|   -6.908996|
+|        3240|  0.0000e+00|   -6.909048|
+|        3250|  0.0000e+00|   -6.915241|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (7946.05 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (770.871 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (62.5383 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.5995 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                      (17.238 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        3260|  0.0000e+00|   -6.926549|
+|        3270|  0.0000e+00|   -6.926560|
+|        3280|  0.0000e+00|   -6.912429|
+|        3290|  0.0000e+00|   -6.934313|
+|        3300|  0.0000e+00|   -6.934702|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (2163.13 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (548.123 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (61.7588 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.3643 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (4.91378 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        3310|  0.0000e+00|   -6.932913|
+|        3320|  0.0000e+00|   -6.938720|
+|        3330|  0.0000e+00|   -6.951446|
+|        3340|  0.0000e+00|   -6.953494|
+|        3350|  0.0000e+00|   -6.947878|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8923.29 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                      (228.93 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (8.05448 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.9292 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (18.9321 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        3360|  0.0000e+00|   -6.958663|
+|        3370|  0.0000e+00|   -6.961162|
+|        3380|  0.0000e+00|   -6.960834|
+|        3390|  0.0000e+00|   -6.965337|
+|        3400|  0.0000e+00|   -6.974091|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8788.47 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (246.413 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (61.4346 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                      (18.535 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (17.5737 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        3410|  0.0000e+00|   -6.974942|
+|        3420|  0.0000e+00|   -6.970184|
+|        3430|  0.0000e+00|   -6.979142|
+|        3440|  0.0000e+00|   -6.982919|
+|        3450|  0.0000e+00|   -6.982989|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                      (8922.5 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (675.767 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (62.4485 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.6388 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (16.5778 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        3460|  0.0000e+00|   -6.982536|
+|        3470|  0.0000e+00|   -6.992855|
+|        3480|  0.0000e+00|   -6.978954|
+|        3490|  0.0000e+00|   -6.976370|
+|        3500|  0.0000e+00|   -6.979377|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (8044.64 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (583.913 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (61.2392 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.7083 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (17.6392 MB/s)|
++-----------------------------------------------------------------------+
++--------------------------------------+
+|  Inner_Iter|    Cur_Time|    rms[Rho]|
++--------------------------------------+
+|        3510|  0.0000e+00|   -6.998142|
+|        3511|  0.0000e+00|   -7.000505|
+
+----------------------------- Solver Exit -------------------------------
+All convergence criteria satisfied.
++-----------------------------------------------------------------------+
+|      Convergence Field     |     Value    |   Criterion  |  Converged |
++-----------------------------------------------------------------------+
+|                    rms[Rho]|       -7.0005|          < -7|         Yes|
++-----------------------------------------------------------------------+
+-------------------------------------------------------------------------
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 binary restart                 |restart_flow_databladeVALIDATION_Blade_2.dat|
+|                                   |                     (7676.41 MB/s)|
+|Paraview                           |volume_flow_databladeVALIDATION_Blade_2.vtu|
+|                                   |                     (682.337 MB/s)|
+|Paraview surface                   |surface_flowdatabladeVALIDATION_Blade_2.vtu|
+|                                   |                     (49.4947 MB/s)|
+|SU2 ASCII restart                  |restart_flow_databladeVALIDATION_Blade_2.csv|
+|                                   |                     (19.7436 MB/s)|
+|CSV file                           |surface_flowdatabladeVALIDATION_Blade_2.csv|
+|                                   |                     (17.2888 MB/s)|
++-----------------------------------------------------------------------+
+
+--------------------------- Finalizing Solver ---------------------------
+Deleted CNumerics container.
+Deleted CIntegration container.
+Deleted CSolver container.
+Deleted CIteration container.
+Deleted CInterface container.
+Deleted CGeometry container.
+Deleted CFreeFormDefBox class.
+Deleted CSurfaceMovement class.
+Deleted CVolumetricMovement class.
+Deleted CConfig container.
+Deleted nInst container.
+Deleted COutput class.
+-------------------------------------------------------------------------
+
+
+-------------------------- Performance Summary --------------------------
+Simulation totals:
+   Wall-clock time (hrs):    0.106131 |            Core-hrs:     1.27357
+                   Cores:          12 |          DOFs/point:           5
+             Points/core:     3209.08 |   Ghost points/core:     134.833
+ Ghost/Owned Point Ratio:   0.0420162 | 
+
+Preprocessing phase:
+       Preproc. Time (s):    0.322884 |   Preproc. Time (%):   0.0845088
+
+Compute phase:
+        Compute Time (s):      380.16 |    Compute Time (%):     99.4998
+         Iteration count:        3512 |         Avg. s/iter:    0.108246
+     Core-s/iter/Mpoints:      32.371 |           Mpoints/s:    0.370702
+
+Output phase:
+         Output Time (s):     1.58824 |     Output Time (%):    0.415693
+            Output count:           1 |       Avg. s/output:     1.58824
+ Restart Aggr. BW (MB/s):      405780 |           MB/s/core:       33815
+-------------------------------------------------------------------------
+
+
+------------------------- Exit Success (SU2_CFD) ------------------------
+

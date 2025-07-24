@@ -36,13 +36,13 @@ def create_rerun_script(run_dir, bladeName, base_dir,
                         alpha1_deg, alpha2_deg, Re, R, gamma, mu, 
                         pitch, d_factor, stagger, axial_chord, chord, pitch2chord,
                         T01, T02, T2, P01, P1, M1, P2_P0a, M2, P2, c2, u2, rho2,
-                        dist_inlet, dist_outlet, TI,
+                        dist_inlet, dist_outlet, x_plane, TI,
                         sizeCellFluid, sizeCellAirfoil,
                         nCellAirfoil, nCellPerimeter, nBoundaryPoints,
                         first_layer_height, bl_growth, bl_thickness,
                         size_LE, dist_LE, size_TE, dist_TE,
                         VolWAkeIn, VolWAkeOut,
-                        WakeXMin, WakeXMax, WakeYMin, WakeYMax):
+                        WakeXMin, WakeXMax):
     """Write a runnable Python script inside *run_dir* to rerun or replot."""
     date_str = datetime.now().strftime('%d-%m-%Y, %H:%M:%S')
     script_path = Path(run_dir) / "rerun.py"
@@ -75,7 +75,7 @@ run_dir = Path(__file__).resolve().parent
 base_dir = Path(__file__).resolve().parents[4]
 blade_dir = base_dir / 'Blades' / bladeName
 isesFilePath = blade_dir / f'ises.{string}'
-bladeFilePath = blade_dir / f'{bladeName}.{string}'
+bladeFilePath = blade_dir / f'blade.{string}'
 outletFilePath = blade_dir / f'outlet.{string}'
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -116,6 +116,7 @@ TI = {TI}
 # ─────────────────────────────────────────────────────────────────────────────
 dist_inlet = {dist_inlet}
 dist_outlet = {dist_outlet}
+x_plane = {x_plane}
 sizeCellFluid = {sizeCellFluid}
 sizeCellAirfoil = {sizeCellAirfoil}
 nCellAirfoil = {nCellAirfoil}
@@ -132,8 +133,6 @@ VolWAkeIn = {VolWAkeIn}
 VolWAkeOut = {VolWAkeOut}
 WakeXMin = {WakeXMin}
 WakeXMax = {WakeXMax}
-WakeYMin = {WakeYMin}
-WakeYMax = {WakeYMax}
 
 for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
     mod.bladeName = bladeName
@@ -176,6 +175,7 @@ for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
     
     mod.dist_inlet = dist_inlet
     mod.dist_outlet = dist_outlet
+    mod.x_plane
     mod.sizeCellFluid = sizeCellFluid
     mod.sizeCellAirfoil = sizeCellAirfoil
     mod.nCellAirfoil = nCellAirfoil
@@ -192,8 +192,6 @@ for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
     mod.VolWAkeOut = VolWAkeOut
     mod.WakeXMin = WakeXMin
     mod.WakeXMax = WakeXMax
-    mod.WakeYMin = WakeYMin
-    mod.WakeYMax = WakeYMax
 
 def rerun():
     #mesh_datablade.mesh_datablade()
@@ -229,7 +227,7 @@ def main():
     
     # --- USER INPUTS 
     parser = argparse.ArgumentParser(description="Run blade analysis")
-    parser.add_argument('--blade', default='Blade_1', help='Blade name')
+    parser.add_argument('--blade', default='Blade_0', help='Blade name')
     parser.add_argument('--blades', nargs='+', help='Process multiple blades')
     parser.add_argument('--no_cores', type=int, default=12, help='MPI cores for SU2')
     parser.add_argument('--suffix', default='databladeVALIDATION', help='File name suffix')
@@ -305,6 +303,8 @@ def main():
         #--- INLET & OUTLET
         dist_inlet = 1
         dist_outlet = 1.5
+        x_plane = 1
+        print(f"Probe plane location: {(x_plane + 1) * axial_chord}")
         
         # -- GEOMETRY EXTRACTION 
         out = utils.process_airfoil_file(bladeFilePath, n_points=1000, n_te=60, d_factor=d_factor)
@@ -344,10 +344,8 @@ def main():
         VolWAkeIn   = 0.35 * sizeCellFluid
         VolWAkeOut  = sizeCellFluid
         WakeXMin    = 0.1 * axial_chord 
-        WakeXMax    = (dist_outlet + 1) * axial_chord
-        WakeYMin    = -5 * pitch
-        WakeYMax    =  5 * pitch
-
+        WakeXMax    = (dist_outlet + 0.5) * axial_chord
+        
         # expose variables to modules
         for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
             mod.bladeName = bladeName
@@ -390,6 +388,7 @@ def main():
             
             mod.dist_inlet = dist_inlet
             mod.dist_outlet = dist_outlet
+            mod.x_plane = x_plane
             mod.sizeCellFluid = sizeCellFluid
             mod.sizeCellAirfoil = sizeCellAirfoil
             mod.nCellAirfoil = nCellAirfoil
@@ -406,33 +405,30 @@ def main():
             mod.VolWAkeOut = VolWAkeOut
             mod.WakeXMin = WakeXMin
             mod.WakeXMax = WakeXMax
-            mod.WakeYMin = WakeYMin
-            mod.WakeYMax = WakeYMax
             
         create_rerun_script(run_dir, bladeName, base_dir,
                             no_cores, string, fileExtension,
                             alpha1_deg, alpha2_deg, Re, R, gamma, mu, 
                             pitch, d_factor, stagger, axial_chord, chord, pitch2chord,
                             T01, T02, T2, P01, P1, M1, P2_P0a, M2, P2, c2, u2, rho2,
-                            dist_inlet, dist_outlet, TI,
+                            dist_inlet, dist_outlet, x_plane, TI,
                             sizeCellFluid, sizeCellAirfoil,
                             nCellAirfoil, nCellPerimeter, nBoundaryPoints,
                             first_layer_height, bl_growth, bl_thickness,
                             size_LE, dist_LE, size_TE, dist_TE,
                             VolWAkeIn, VolWAkeOut,
-                            WakeXMin, WakeXMax, WakeYMin, WakeYMax)
+                            WakeXMin, WakeXMax)
         
         mesh_datablade.mesh_datablade()
-        '''
         configSU2_datablade.configSU2_datablade()
         proc, logf = configSU2_datablade.runSU2_datablade(background=True)
-        if utils.ask_view_live(bladeName):
-            time.sleep(5)
-            utils.launch_paraview_live(run_dir, bladeName, string)
+        #if utils.ask_view_live(bladeName):
+        #    time.sleep(5)
+        #    utils.launch_paraview_live(run_dir, bladeName, string)
         proc.wait()
         logf.close()
         configSU2_datablade._summarize_su2_log(run_dir / "su2.log")
-        post_processing_datablade.post_processing_datablade()'''
+        post_processing_datablade.post_processing_datablade()
 
 if __name__ == '__main__':
     main()

@@ -147,7 +147,6 @@ def post_processing_datablade():
     H_PS        = bl_all['H'][mask_ps]
 
     
-    
     # ─────────────────────────────────────────────────────────────────────────────
     #   MISES DATA
     # ─────────────────────────────────────────────────────────────────────────────
@@ -203,7 +202,10 @@ def post_processing_datablade():
         
     
     # field file data extraction
-    
+    if file_nonempty(mises_fieldFile):
+        all_x, all_y, _, all_p, all_u, all_v, _, all_m = MISES_fieldDataGather(mises_fieldFile)
+    else:
+        all_x, all_y, all_p, all_u, all_v, all_m = [], [], [], [], [], []
     
     # ─────────────────────────────────────────────────────────────────────────────
     #   RMS VERIFICATION
@@ -229,6 +231,7 @@ def post_processing_datablade():
         except OSError:
             print(f"[WARNING] Could not append RMS to {summary_file}")
     
+    
     # ─────────────────────────────────────────────────────────────────────────────
     #   PLOTTING
     # ─────────────────────────────────────────────────────────────────────────────
@@ -251,3 +254,23 @@ def post_processing_datablade():
     SU2_DataPlotting(s_normSS, s_normPS, H_SS, H_PS, 
                  "Shape Factor", string, run_dir, bladeName, mirror_PS=True,
                  exp_s=blade_frac_bl, exp_data=H_bl)
+    
+    
+    p_plane = (x_plane + 1) * axial_chord
+    
+    #su2_pitch, su2_loss = SU2_plane_total_pressure_loss(
+    #    vol_df, p_plane, pitch, alpha2, P01, tol=1e-2)
+    su2_res = SU2_total_pressure_loss(
+        vol_df, p_plane, pitch, P01, alpha2, atol=sizeCellFluid/2, smooth=False, n_points=500, s=1e-3)  #order: n_points 10^2 - s 10^-3
+    su2_pitch, su2_loss = su2_res['y_norm'], su2_res['loss']
+    mises_pitch, mises_loss = MISES_plane_total_pressure_loss(
+        all_x, all_y, all_p, all_m, p_plane, pitch, P01, tol=1e-2)
+    
+    plt.scatter(su2_pitch, su2_loss, label='SU2', s=0.5)
+    if len(mises_pitch):
+        plt.scatter(mises_pitch, mises_loss, s=1, color='red', label='MISES')
+    plt.xlabel('y/pitch')
+    plt.ylabel('Total pressure loss')
+    plt.legend()
+    plt.savefig(run_dir / f"loss_pitch_{string}_{bladeName}.svg", format='svg', bbox_inches='tight')
+    plt.show()

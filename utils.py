@@ -3,7 +3,7 @@ import math
 import shutil
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import CubicSpline, UnivariateSpline
 from scipy.signal import savgol_filter
 from pathlib import Path
 import subprocess
@@ -742,6 +742,9 @@ def compute_Spec_Dissipation(k, ILS):
     omega = C_mu**(3/4) * k**(1/2)/ILS
     return omega
 
+def compute_total_pressure(P, M, gamma):
+    return P * (1 + 0.5*(gamma-1)*M**2)**(gamma/(gamma-1))
+
 def freestream_total_pressure(Re, M, L, T,
                               mu=1.8464e-5,   # dynamic viscosity of air at ~300 K [kg m-1 s-1]
                               gamma=1.4,      # ratio of specific heats for air
@@ -756,17 +759,6 @@ def freestream_total_pressure(Re, M, L, T,
     p_total = p_static * pressure_ratio          # stagnation pressure
     return p_static, p_total
 
-
-# --- example with your numbers ---------------------------------------------
-Re = 6.0e5      # Reynolds number
-M  = 0.5        # Mach number
-L  = 0.20       # chord length [m] – change to your model’s chord
-T  = 288.0      # static temp [K] – change to test temperature
-
-p_static, p_total = freestream_total_pressure(Re, M, L, T)
-
-print(f"Static pressure : {p_static/1000:.2f} kPa")
-print(f"Total pressure  : {p_total/1000:.2f} kPa")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -820,11 +812,78 @@ def SU2_extract_plane_data(df, x_plane, pitch, alpha_m, atol=1e-4):
     # Extract and organize the data
     sub_df = df.loc[mask, columns + ['x']].copy()
     sub_df['y_norm'] = sub_df['y'] / pitch  # Normalize y
-    sub_df['flow_angle'] = np.atan2(sub_df['Velocity_y'], sub_df['Velocity_x']) * 180 / np.pi - alpha_m
+    sub_df['flow_angle'] = np.arctan2(sub_df['Velocity_y'], sub_df['Velocity_x']) * 180 / np.pi - alpha_m
     
     # Sort by normalized y for clean plots
     sub_df = sub_df.sort_values('y_norm').reset_index(drop=True)
     return sub_df    
+
+def SU2_plane_total_pressure_loss(df, x_plane, pitch, alpha_m, P0_in, tol=1e-4, gamma=1.4):
+    """Return pitchwise total pressure loss from SU2 restart data."""
+    plane = SU2_extract_plane_data(df, x_plane, pitch, alpha_m, atol=tol)
+    if plane is None or len(plane) == 0:
+        return np.array([]), np.array([])
+
+    p0 = compute_total_pressure(plane['Pressure'].values,
+                                plane['Mach'].values, gamma)
+    loss = (P0_in - p0) / P0_in
+
+    y_map = ((plane['y_norm'].values + 0.5) % 1.0) - 0.5
+    df_out = pd.DataFrame({'y': y_map, 'loss': loss})
+    grp = df_out.groupby('y', as_index=False).mean()
+    grp = grp.sort_values('y')
+    return grp['y'].values, grp['loss'].values
+
+def SU2_total_pressure_loss(
+        df,
+        x_plane,
+        pitch,
+        P01,
+        alpha_m=0.0,
+        atol=1e-4,
+        smooth=False,
+        n_points=100,
+        s=1e-4,
+):
+    """Return total pressure loss distribution at a given ``x_plane``.
+
+    The loss coefficient is ``(P01 - P) / P01`` where ``P`` is the static
+    pressure extracted from the ``restart`` solution on the chosen plane.
+
+    ``y`` coordinates are mapped to ``[-0.5, 0.5]`` to account for periodicity.
+
+    Parameters
+    ----------
+    smooth : bool, optional
+        If ``True`` a smoothing spline is fitted and returned on ``n_points``
+        equally spaced samples.
+    n_points : int, optional
+        Number of points for the interpolated curve when ``smooth`` is ``True``.
+    s : float, optional
+        Smoothing factor passed to :class:`UnivariateSpline`.
+    """
+    plane_df = SU2_extract_plane_data(df, x_plane, pitch, alpha_m, atol)
+    if plane_df is None:
+        return None
+
+    p0 = compute_total_pressure(plane_df['Pressure'].values,
+                                plane_df['Mach'].values, gamma=1.4)
+    P0_in = P01
+    plane_df['loss'] = (P0_in - p0) / P0_in
+    # remap y/pitch into [-0.5, 0.5] range
+    plane_df['y_norm'] = ((plane_df['y_norm'] + 0.5) % 1.0) - 0.5
+    plane_df = plane_df.sort_values('y_norm').reset_index(drop=True)
+
+    if smooth:
+        x = plane_df['y_norm'].values
+        y = plane_df['loss'].values
+        spl = UnivariateSpline(x, y, s=s)
+        x_i = np.linspace(-0.5, 0.5, n_points)
+        y_i = spl(x_i)
+        return pd.DataFrame({'y_norm': x_i, 'loss': y_i})
+
+    return plane_df[['y_norm', 'loss']]
+
 
 def SU2_DataPlotting(
         sSSnorm,    # suction side arc fraction
@@ -1002,6 +1061,80 @@ def MISES_fieldDataGather(file_path):
         all_m.append(m_tmp)
 
     return all_x, all_y, all_rho, all_p, all_u, all_v, all_q, all_m
+
+def MISES_plane_total_pressure_loss(all_x, all_y, all_p, all_M,
+                                    x_plane, pitch, P0_in, tol=1e-2, gamma=1.4):
+    """Return pitchwise total pressure loss from MISES field data."""
+    y_list = []
+    loss_list = []
+    for x_tube, y_tube, p_tube, m_tube in zip(all_x, all_y, all_p, all_M):
+        arr_x = np.asarray(x_tube)
+        idx = np.abs(arr_x - x_plane).argmin()
+        if abs(arr_x[idx] - x_plane) > tol:
+            continue
+        p_static = np.asarray(p_tube)[idx] * P0_in
+        mach = np.asarray(m_tube)[idx]
+        p0 = compute_total_pressure(p_static, mach, gamma)
+        loss = (P0_in - p0) / P0_in
+        y_list.append(y_tube[idx])
+        loss_list.append(loss)
+
+    if not y_list:
+        return np.array([]), np.array([])
+
+    y_norm = np.array(y_list) / pitch
+    y_map = ((y_norm + 0.5) % 1.0) - 0.5
+    df_out = pd.DataFrame({'y': y_map, 'loss': loss_list})
+    grp = df_out.groupby('y', as_index=False).mean()
+    grp = grp.sort_values('y')
+    return grp['y'].values, grp['loss'].values
+
+
+def MISES_total_pressure_loss(
+        field_file,
+        x_plane,
+        pitch,
+        smooth=False,
+        n_points=200,
+        s=1e-4,
+):
+    """Return total pressure loss from a MISES ``field`` file.
+
+    The file columns are ``x, y, rho/rho0, p/p0, u/a0, v/a0, q/a0, M``.  Each
+    streamtube is separated by blank lines.  ``p/p0`` is interpolated at the
+    chosen ``x_plane`` for each tube and mapped to ``[-0.5, 0.5]`` via the pitch
+    length.
+    """
+    all_x, all_y, _, all_p, *_ = MISES_fieldDataGather(field_file)
+
+    y_vals = []
+    loss_vals = []
+    for x_arr, y_arr, p_arr in zip(all_x, all_y, all_p):
+        if not x_arr:
+            continue
+        if x_plane < min(x_arr) or x_plane > max(x_arr):
+            continue
+        y_val = np.interp(x_plane, x_arr, y_arr)
+        p_norm = np.interp(x_plane, x_arr, p_arr)
+        y_vals.append(y_val / pitch)
+        loss_vals.append(1.0 - p_norm)
+
+    if not loss_vals:
+        return None
+
+    df = pd.DataFrame({'y_norm': y_vals, 'loss': loss_vals})
+    df['y_norm'] = ((df['y_norm'] + 0.5) % 1.0) - 0.5
+    df = df.sort_values('y_norm').reset_index(drop=True)
+
+    if smooth:
+        x = df['y_norm'].values
+        y = df['loss'].values
+        spl = UnivariateSpline(x, y, s=s)
+        x_i = np.linspace(-0.5, 0.5, n_points)
+        y_i = spl(x_i)
+        return pd.DataFrame({'y_norm': x_i, 'loss': y_i})
+
+    return df
 
 def MISES_machDataGather(file_path):
     """
