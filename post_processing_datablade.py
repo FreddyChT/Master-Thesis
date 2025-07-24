@@ -258,20 +258,49 @@ def post_processing_datablade():
     
     p_plane = (x_plane + 1) * axial_chord
     
-    #su2_pitch, su2_loss = SU2_plane_total_pressure_loss(
-    #    vol_df, p_plane, pitch, alpha2, P01, tol=1e-2)
     su2_res = SU2_total_pressure_loss(
-        vol_df, p_plane, pitch, P01, alpha2, atol=sizeCellFluid/2, smooth=False, n_points=500, s=1e-3)  #order: n_points 10^2 - s 10^-3
+        vol_df,
+        p_plane,
+        pitch,
+        P01,
+        alpha2,
+        atol=sizeCellFluid/2,
+        smooth=True,
+        n_points=500,
+        s=1e-3,
+        method="savgol",
+        window_length=15,
+        polyorder=4
+        )  # order: n_points 10^2 - s 10^-3
     su2_pitch, su2_loss = su2_res['y_norm'], su2_res['loss']
     su2_pitch, su2_loss = align_pitch(su2_pitch, su2_loss)
     
-    mises_pitch, mises_loss = MISES_plane_total_pressure_loss(
-        all_x, all_y, all_p, all_m, p_plane, pitch, P01, tol=1e-2)
+    mises_res = MISES_total_pressure_loss(
+        mises_fieldFile,
+        p_plane,
+        pitch,
+        smooth=True,
+        n_points=200,
+        s=1e-4,
+        method="savgol",
+        window_length=15,
+        polyorder=4
+        )
+    mises_pitch, mises_loss = mises_res['y_norm'], mises_res['loss']
     mises_pitch, mises_loss = align_pitch(mises_pitch, mises_loss)
+    
+    if len(mises_loss) >= 5:
+        wl = 15 if 15 % 2 == 1 else 15 + 1
+        max_wl = len(mises_loss) if len(mises_loss) % 2 == 1 else len(mises_loss) - 1
+        if wl > max_wl:
+            wl = max_wl
+        if wl < 5:
+            wl = max_wl
+        mises_loss = savgol_filter(mises_loss, wl, 3)
     
     plt.scatter(su2_pitch, su2_loss, label='SU2', s=0.5)
     if len(mises_pitch):
-        plt.scatter(mises_pitch, mises_loss, s=1, color='red', label='MISES')
+        plt.scatter(mises_pitch, mises_loss, s=0.5, color='red', label='MISES')
     plt.xlabel('y/pitch')
     plt.xlim(-0.6, 0.6)
     plt.ylabel('Total pressure loss')

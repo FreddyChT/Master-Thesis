@@ -593,7 +593,7 @@ def compute_bl_parameters(U_inf: float,
 #  Boundary-layer integrals along an outward normal
 # ────────────────────────────────────────────────────────────────────────
 
-def _normal_at_surface_point(x_surf, y_surf, x_prev, y_prev, x_next, y_next):
+def normal_at_surface_point(x_surf, y_surf, x_prev, y_prev, x_next, y_next):
     """Unit normal pointing outside the blade (2-D)."""
     # tangent = next − prev   (already LE→TE ordering)
     tx, ty = x_next - x_prev, y_next - y_prev
@@ -602,8 +602,7 @@ def _normal_at_surface_point(x_surf, y_surf, x_prev, y_prev, x_next, y_next):
     mag = np.hypot(nx, ny)
     return nx/mag, ny/mag
 
-
-def _bl_integrals(y, rho, u):
+def bl_integrals(y, rho, u):
     """Return θ, δ*, H given wall-normal profiles (already non-dim)."""
     # ρ_e, U_e at last entry
     rho_e, ue = rho[-1], u[-1]
@@ -612,7 +611,6 @@ def _bl_integrals(y, rho, u):
     delta_star = np.trapz((rho/rho_e)*(1 - u/ue), y)
     H          = delta_star/theta if theta > 0 else np.nan
     return theta, delta_star, H
-
 
 def bl_distributions(surface_df: "pd.DataFrame",
                      volume_df:  "pd.DataFrame",
@@ -643,7 +641,7 @@ def bl_distributions(surface_df: "pd.DataFrame",
     for i, (xs_i, ys_i) in enumerate(zip(xs, ys)):
         # tangent neighbours (cyclic indexing)
         ip = (i+1) % len(xs); im = (i-1) % len(xs)
-        nx, ny = _normal_at_surface_point(xs_i, ys_i,
+        nx, ny = normal_at_surface_point(xs_i, ys_i,
                                           xs[im], ys[im], xs[ip], ys[ip])
 
         # sample points along the normal
@@ -666,7 +664,7 @@ def bl_distributions(surface_df: "pd.DataFrame",
             y_loc, u_p, rho_p = y_local, u_prof, rho_prof
             mu_e = mu_prof[-1]
 
-        θ, δs, H = _bl_integrals(y_loc, rho_p, u_p)
+        θ, δs, H = bl_integrals(y_loc, rho_p, u_p)
         Re_theta = rho_p[-1]*u_p[-1]*θ / mu_e
 
         theta_arr.append(θ); Re_theta_arr.append(Re_theta); H_arr.append(H)
@@ -852,21 +850,6 @@ def SU2_extract_plane_data(df, x_plane, pitch, alpha_m, atol=1e-4):
     sub_df = sub_df.sort_values('y_norm').reset_index(drop=True)
     return sub_df    
 
-def SU2_plane_total_pressure_loss(df, x_plane, pitch, alpha_m, P0_in, tol=1e-4, gamma=1.4):
-    """Return pitchwise total pressure loss from SU2 restart data."""
-    plane = SU2_extract_plane_data(df, x_plane, pitch, alpha_m, atol=tol)
-    if plane is None or len(plane) == 0:
-        return np.array([]), np.array([])
-
-    p0 = compute_total_pressure(plane['Pressure'].values,
-                                plane['Mach'].values, gamma)
-    loss = (P0_in - p0) / P0_in
-
-    y_map = ((plane['y_norm'].values + 0.5) % 1.0) - 0.5
-    df_out = pd.DataFrame({'y': y_map, 'loss': loss})
-    grp = df_out.groupby('y', as_index=False).mean()
-    grp = grp.sort_values('y')
-    return grp['y'].values, grp['loss'].values
 
 def SU2_total_pressure_loss(
         df,
@@ -878,6 +861,9 @@ def SU2_total_pressure_loss(
         smooth=False,
         n_points=100,
         s=1e-4,
+        method="savgol",
+        window_length=15,
+        polyorder=3,
 ):
     """Return total pressure loss distribution at a given ``x_plane``.
 
@@ -889,12 +875,20 @@ def SU2_total_pressure_loss(
     Parameters
     ----------
     smooth : bool, optional
-        If ``True`` a smoothing spline is fitted and returned on ``n_points``
-        equally spaced samples.
+        If ``True`` the loss distribution is smoothed before returning.
     n_points : int, optional
-        Number of points for the interpolated curve when ``smooth`` is ``True``.
+        Number of points for the interpolated curve when ``smooth`` is ``True``
+        and ``method`` is ``"spline"``.
     s : float, optional
         Smoothing factor passed to :class:`UnivariateSpline`.
+    method : {{"spline", "savgol"}}, optional
+        Smoothing method to use when ``smooth`` is ``True``. ``"spline"`` uses a
+        :class:`UnivariateSpline` whereas ``"savgol"`` applies a
+        Savitzky–Golay filter.
+    window_length : int, optional
+        Window length for the Savitzky–Golay filter.
+    polyorder : int, optional
+        Polynomial order for the Savitzky–Golay filter.
     """
     plane_df = SU2_extract_plane_data(df, x_plane, pitch, alpha_m, atol)
     if plane_df is None:
@@ -911,15 +905,29 @@ def SU2_total_pressure_loss(
     if smooth:
         x = plane_df['y_norm'].values
         y = plane_df['loss'].values
-        spl = UnivariateSpline(x, y, s=s)
-        x_i = np.linspace(-0.5, 0.5, n_points)
-        y_i = spl(x_i)
-        out = pd.DataFrame({'y_norm': x_i, 'loss': y_i})
+        if method == "savgol":
+            wl = window_length if window_length % 2 == 1 else window_length + 1
+            max_wl = len(y) if len(y) % 2 == 1 else len(y) - 1
+            if wl > max_wl:
+                wl = max_wl
+            min_wl = polyorder + 2
+            if min_wl % 2 == 0:
+                min_wl += 1
+            if wl < min_wl:
+                wl = min(max_wl, min_wl)
+            y_smooth = savgol_filter(y, wl, polyorder)
+            out = pd.DataFrame({'y_norm': x, 'loss': y_smooth})
+        else:
+            spl = UnivariateSpline(x, y, s=s)
+            x_i = np.linspace(-0.5, 0.5, n_points)
+            y_i = spl(x_i)
+            out = pd.DataFrame({'y_norm': x_i, 'loss': y_i})
     else:
         out = plane_df[['y_norm', 'loss']]
 
     y_a, v_a = align_pitch(out['y_norm'].values, out['loss'].values)
     return pd.DataFrame({'y_norm': y_a, 'loss': v_a})
+
 
 
 def SU2_DataPlotting(
@@ -1099,33 +1107,6 @@ def MISES_fieldDataGather(file_path):
 
     return all_x, all_y, all_rho, all_p, all_u, all_v, all_q, all_m
 
-def MISES_plane_total_pressure_loss(all_x, all_y, all_p, all_M,
-                                    x_plane, pitch, P0_in, tol=1e-2, gamma=1.4):
-    """Return pitchwise total pressure loss from MISES field data."""
-    y_list = []
-    loss_list = []
-    for x_tube, y_tube, p_tube, m_tube in zip(all_x, all_y, all_p, all_M):
-        arr_x = np.asarray(x_tube)
-        idx = np.abs(arr_x - x_plane).argmin()
-        if abs(arr_x[idx] - x_plane) > tol:
-            continue
-        p_static = np.asarray(p_tube)[idx] * P0_in
-        mach = np.asarray(m_tube)[idx]
-        p0 = compute_total_pressure(p_static, mach, gamma)
-        loss = (P0_in - p0) / P0_in
-        y_list.append(y_tube[idx])
-        loss_list.append(loss)
-
-    if not y_list:
-        return np.array([]), np.array([])
-
-    y_norm = np.array(y_list) / pitch
-    y_map = ((y_norm + 0.5) % 1.0) - 0.5
-    df_out = pd.DataFrame({'y': y_map, 'loss': loss_list})
-    grp = df_out.groupby('y', as_index=False).mean()
-    grp = grp.sort_values('y')
-    return grp['y'].values, grp['loss'].values
-
 
 def MISES_total_pressure_loss(
         field_file,
@@ -1134,6 +1115,9 @@ def MISES_total_pressure_loss(
         smooth=False,
         n_points=200,
         s=1e-4,
+        method="savgol",
+        window_length=15,
+        polyorder=3,
 ):
     """Return total pressure loss from a MISES ``field`` file.
 
@@ -1141,6 +1125,22 @@ def MISES_total_pressure_loss(
     streamtube is separated by blank lines.  ``p/p0`` is interpolated at the
     chosen ``x_plane`` for each tube and mapped to ``[-0.5, 0.5]`` via the pitch
     length.
+
+    Parameters
+    ----------
+    smooth : bool, optional
+        If ``True`` the loss distribution is smoothed before returning.
+    n_points : int, optional
+        Number of samples used when ``smooth`` is ``True`` and ``method`` is
+        ``"spline"``.
+    s : float, optional
+        Smoothing factor for :class:`UnivariateSpline`.
+    method : {"spline", "savgol"}, optional
+        Smoothing method when ``smooth`` is ``True``.
+    window_length : int, optional
+        Window length for the Savitzky–Golay filter.
+    polyorder : int, optional
+        Polynomial order for the Savitzky–Golay filter.
     """
     all_x, all_y, _, all_p, *_ = MISES_fieldDataGather(field_file)
 
@@ -1160,21 +1160,35 @@ def MISES_total_pressure_loss(
         return None
 
     df = pd.DataFrame({'y_norm': y_vals, 'loss': loss_vals})
-    df['y_norm'] = ((df['y_norm'] + 0.5) % 1.0) - 0.5
+    df['y_norm'] = ((df['y_norm'] - 0.1) % 1.0) - 0.5
     df = df.sort_values('y_norm').reset_index(drop=True)
 
     if smooth:
         x = df['y_norm'].values
         y = df['loss'].values
-        spl = UnivariateSpline(x, y, s=s)
-        x_i = np.linspace(-0.5, 0.5, n_points)
-        y_i = spl(x_i)
-        out = pd.DataFrame({'y_norm': x_i, 'loss': y_i})
+        if method == "savgol":
+            wl = window_length if window_length % 2 == 1 else window_length + 1
+            max_wl = len(y) if len(y) % 2 == 1 else len(y) - 1
+            if wl > max_wl:
+                wl = max_wl
+            min_wl = polyorder + 2
+            if min_wl % 2 == 0:
+                min_wl += 1
+            if wl < min_wl:
+                wl = min(max_wl, min_wl)
+            y_smooth = savgol_filter(y, wl, polyorder)
+            out = pd.DataFrame({'y_norm': x, 'loss': y_smooth})
+        else:
+            spl = UnivariateSpline(x, y, s=s)
+            x_i = np.linspace(-0.5, 0.5, n_points)
+            y_i = spl(x_i)
+            out = pd.DataFrame({'y_norm': x_i, 'loss': y_i})
     else:
         out = df
 
     y_a, v_a = align_pitch(out['y_norm'].values, out['loss'].values)
     return pd.DataFrame({'y_norm': y_a, 'loss': v_a})
+
 
 def MISES_machDataGather(file_path):
     """
