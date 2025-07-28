@@ -68,7 +68,7 @@ TI = 3.5
 # ─────────────────────────────────────────────────────────────────────────────
 dist_inlet = 1
 dist_outlet = 1.5
-x_plane = 1
+x_plane = 1.5
 sizeCellFluid = 0.0018356200298541559
 sizeCellAirfoil = 0.0009178100149270779
 nCellAirfoil = 300

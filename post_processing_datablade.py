@@ -134,7 +134,7 @@ def post_processing_datablade():
     vol_df   = pd.read_csv(vol_file, sep=',')
     
     # --- Boundary-layer integrals on the whole blade ------------------------
-    bl_all = bl_distributions(df, vol_df)
+    bl_all = bl_distributions(df, vol_df, y_max = bl_thickness/3, n_samples = 25)
     
     # split into SS / PS by the same masks returned by SU2_organize -----------
     mask_ss = df.index.isin(dataSS.index)
@@ -266,44 +266,24 @@ def post_processing_datablade():
         alpha2,
         atol=sizeCellFluid/2,
         smooth=True,
-        n_points=500,
-        s=1e-3,
-        method="savgol",
         window_length=15,
-        polyorder=4
-        )  # order: n_points 10^2 - s 10^-3
+        polyorder=4,
+    )  # order: n_points 10^2 - s 10^-3
     su2_pitch, su2_loss = su2_res['y_norm'], su2_res['loss']
-    su2_pitch, su2_loss = align_pitch(su2_pitch, su2_loss)
     
     mises_res = MISES_total_pressure_loss(
-        mises_fieldFile,
-        p_plane,
-        pitch,
-        smooth=True,
-        n_points=200,
-        s=1e-4,
-        method="savgol",
-        window_length=15,
-        polyorder=4
-        )
-    mises_pitch, mises_loss = mises_res['y_norm'], mises_res['loss']
-    mises_pitch, mises_loss = align_pitch(mises_pitch, mises_loss)
-    
-    if len(mises_loss) >= 5:
-        wl = 15 if 15 % 2 == 1 else 15 + 1
-        max_wl = len(mises_loss) if len(mises_loss) % 2 == 1 else len(mises_loss) - 1
-        if wl > max_wl:
-            wl = max_wl
-        if wl < 5:
-            wl = max_wl
-        mises_loss = savgol_filter(mises_loss, wl, 3)
+        mises_fieldFile, p_plane, pitch, smooth=True, window_length=15, polyorder=3)
+    if mises_res is not None:
+        mises_pitch, mises_loss = mises_res['y_norm'], mises_res['loss']
+    else:
+        mises_pitch, mises_loss = np.array([]), np.array([])
     
     plt.scatter(su2_pitch, su2_loss, label='SU2', s=0.5)
     if len(mises_pitch):
-        plt.scatter(mises_pitch, mises_loss, s=0.5, color='red', label='MISES')
+        plt.scatter(mises_pitch, mises_loss, color='red', s=0.5, label='MISES')
     plt.xlabel('y/pitch')
     plt.xlim(-0.6, 0.6)
-    plt.ylabel('Total pressure loss')
+    plt.ylabel(f'Total pressure loss - {bladeName}')
     plt.legend()
     plt.savefig(run_dir / f"loss_pitch_{string}_{bladeName}.svg", format='svg', bbox_inches='tight')
     plt.show()

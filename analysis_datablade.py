@@ -220,10 +220,11 @@ def main():
     # ─────────────────────────────────────────────────────────────────────────────
     #   INITIALIZATION
     # ─────────────────────────────────────────────────────────────────────────────
-    #sys.argv = ['analysis_datablade.py', '--blades',
-                #'Blade_1',  'Blade_2',  'Blade_3',  'Blade_4',  'Blade_5',  'Blade_6',  'Blade_7',  'Blade_8',  'Blade_9',  'Blade_10',
-                #'Blade_11', 'Blade_12', 'Blade_13', 'Blade_14', 'Blade_15', 'Blade_16', 'Blade_17', 'Blade_18', 'Blade_19', 'Blade_20',
-                #'Blade_21', 'Blade_22', 'Blade_23', 'Blade_24', 'Blade_25', 'Blade_26']
+    sys.argv = ['analysis_datablade.py', '--blades',
+                'Blade_0',
+                'Blade_1',  'Blade_2',  'Blade_3',  'Blade_4',  'Blade_5',  'Blade_6',  'Blade_7',  'Blade_8',  'Blade_9',  'Blade_10',
+                'Blade_11', 'Blade_12', 'Blade_13', 'Blade_14', 'Blade_15', 'Blade_16', 'Blade_17', 'Blade_18', 'Blade_19', 'Blade_20',
+                'Blade_21', 'Blade_22', 'Blade_23', 'Blade_24', 'Blade_25', 'Blade_26']
     
     # --- USER INPUTS 
     parser = argparse.ArgumentParser(description="Run blade analysis")
@@ -324,14 +325,14 @@ def main():
         d_factor = d_factor
         
         # --- MESH BL PARAMETERS
-        #first_layer_height = 0.01 * sizeCellAirfoil
-        #bl_growth = 1.17
-        #bl_thickness = 0.03 * pitch
+        n_layers = 25
+        y_plus_target = 1
+        x_ref_yplus = 1/n_points
         
         bl = utils.compute_bl_parameters(u2, rho2, mu, axial_chord,
-                                         n_layers    = 25,           # keep in sync with gmsh Field[1].thickness
-                                         y_plus_target = 1.0,
-                                         x_ref_yplus = 1/n_points)
+                                         n_layers,           # keep in sync with gmsh Field[1].thickness
+                                         y_plus_target,
+                                         x_ref_yplus)
         
         first_layer_height = bl['first_layer_height']
         bl_growth          = bl['bl_growth']
@@ -423,9 +424,6 @@ def main():
         mesh_datablade.mesh_datablade()
         configSU2_datablade.configSU2_datablade()
         proc, logf = configSU2_datablade.runSU2_datablade(background=True)
-        #if utils.ask_view_live(bladeName):
-        #    time.sleep(5)
-        #    utils.launch_paraview_live(run_dir, bladeName, string)
         proc.wait()
         logf.close()
         configSU2_datablade._summarize_su2_log(run_dir / "su2.log")

@@ -15,10 +15,10 @@ def configSU2_datablade():
 %                                                                              %
 % SU2 AIRFOIL configuration file                                               %
 % Case description: General Airfoil                                            %
-% Author: Freddy Chica	                                                       %
+% Author: Freddy Chica	                                                         %
 % Institution: Université Catholique de Louvain                                %
 % Date: 11, Nov 2024                                                           %
-% File Version: 9                                                              %
+% File Version: 17                                                              %
 %                                                                              %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

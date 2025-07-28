@@ -3,8 +3,9 @@ import math
 import shutil
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.interpolate import CubicSpline, UnivariateSpline
+from scipy.interpolate import CubicSpline
 from scipy.signal import savgol_filter
+from scipy.spatial import cKDTree
 from pathlib import Path
 import subprocess
 from OCC.Core.TColgp import TColgp_Array1OfPnt
@@ -553,7 +554,6 @@ def compute_bl_parameters(U_inf: float,
                           rho: float,
                           mu: float,
                           chord_axial: float,
-                          *,
                           n_layers: int       = 25,
                           y_plus_target: float = 1.0,
                           x_ref_yplus: float   = 0.02,
@@ -593,85 +593,94 @@ def compute_bl_parameters(U_inf: float,
 #  Boundary-layer integrals along an outward normal
 # ────────────────────────────────────────────────────────────────────────
 
-def normal_at_surface_point(x_surf, y_surf, x_prev, y_prev, x_next, y_next):
-    """Unit normal pointing outside the blade (2-D)."""
-    # tangent = next − prev   (already LE→TE ordering)
-    tx, ty = x_next - x_prev, y_next - y_prev
-    # outward = (+ty, −tx) for a left-hand (anti-clockwise) contour
-    nx, ny =  ty, -tx
-    mag = np.hypot(nx, ny)
-    return nx/mag, ny/mag
-
-def bl_integrals(y, rho, u):
-    """Return θ, δ*, H given wall-normal profiles (already non-dim)."""
-    # ρ_e, U_e at last entry
-    rho_e, ue = rho[-1], u[-1]
-    f1 = (rho/rho_e)*(u/ue)
-    theta      = np.trapz(f1*(1 - u/ue), y)
-    delta_star = np.trapz((rho/rho_e)*(1 - u/ue), y)
-    H          = delta_star/theta if theta > 0 else np.nan
-    return theta, delta_star, H
-
-def bl_distributions(surface_df: "pd.DataFrame",
-                     volume_df:  "pd.DataFrame",
-                     y_max: float = 0.01,
-                     n_samples: int = 50):
+def _normal_at_surface_point(x_surf, y_surf, x_prev, y_prev, x_next, y_next):
     """
-    Loop over every surface node and integrate θ,  δ*,  Re_θ,  H.
+    Outward unit normal for a CW-ordered blade contour.
+    tangent  t  = p_next − p_prev
+    normal   n₀ = (+t_y, −t_x)  (90° CW rotation)
+    """
+    tx, ty = x_next - x_prev, y_next - y_prev
+    nx0, ny0 =  ty, tx                      # ⟂ to t -> CCW is ty, -tx
+    mag = np.hypot(nx0, ny0)
+    if mag == 0.0:                           # duplicate or kinked nodes
+        return 0.0, 0.0
+    return nx0/mag, ny0/mag
+
+def _bl_integrals(y, rho, u):
+    """
+    θ  = ∫ (ρ/ρ_e)(u/U_e)(1 − u/U_e) dy
+    δ* = ∫ (ρ/ρ_e)(1 − u/U_e) dy
+    H  = δ*/θ
+    """
+    # edge quantities – average last 3 pts for noise immunity
+    #rho_e = np.mean(rho[-3:])
+    ue    = np.mean(u  [-3:])
+    g = 1 #(rho/rho_e)
+    f = (u/ue) #g*(u/ue)
+    theta      = np.trapz(f*(1.0 - u/ue), y)          # momentum thickness
+    delta_star = np.trapz(g*(1.0 - u/ue), y)
+    return theta, delta_star, delta_star/theta if theta > 0 else np.nan
+
+def bl_distributions(surface_df,
+                     volume_df,
+                     y_max      = 0.01,
+                     n_samples  = 25,
+                     trim_ue    = 0.99):
+    """
+    Integrate θ, δ*, Re_θ, H at every surface node.
+
+    Parameters
+    ----------
+    surface_df : DataFrame with 'x','y','s_norm'
+    volume_df  : restart_flow CSV (SU2) – needs Density, Momentum_x/y, Laminar_Viscosity
+    y_max      : normal-ray length [m]
+    n_samples  : points per ray
+    trim_ue    : cut when u/ue ≥ trim_ue  (default 0.99 ≈ δ₉₉)
 
     Returns
     -------
-    dict with arrays keyed by 's', 'Re_theta', 'H', split into SS/PS later.
+    dict(s, Re_theta, H)   with NumPy arrays.
     """
-    from scipy.spatial import cKDTree
+    # --- build KD-tree for nearest-cell interrogation ------------------------
+    xy_v  = volume_df[['x', 'y']].values
+    rho_v = volume_df['Density'          ].values
+    mu_v  = volume_df['Laminar_Viscosity'].values
+    momx  = volume_df['Momentum_x'].values
+    momy  = volume_df['Momentum_y'].values
+    u_v   = np.sqrt(momx**2 + momy**2) / rho_v        # |u| from ρu components
+    tree  = cKDTree(xy_v)
 
-    # --- 1) accelerator for nearest-neighbour interpolation ------------------
-    vol_xy   = volume_df[['x', 'y']].values
-    vol_u    = (volume_df['Momentum_x']**2 +
-                volume_df['Momentum_y']**2).pow(0.5).values / volume_df['Density'].values
-    vol_rho  = volume_df['Density'].values
-    vol_mu   = volume_df['Laminar_Viscosity'].values
-    tree = cKDTree(vol_xy)
-
-    # --- 2) prepare outputs --------------------------------------------------
-    theta_arr, Re_theta_arr, H_arr = [], [], []
+    # --- iterate over surface nodes -----------------------------------------
     s_coord = surface_df['s_norm'].values
+    xs, ys  = surface_df['x'].values, surface_df['y'].values
+    n_pts   = len(xs)
 
-    xs, ys = surface_df['x'].values, surface_df['y'].values
-    for i, (xs_i, ys_i) in enumerate(zip(xs, ys)):
-        # tangent neighbours (cyclic indexing)
-        ip = (i+1) % len(xs); im = (i-1) % len(xs)
-        nx, ny = normal_at_surface_point(xs_i, ys_i,
-                                          xs[im], ys[im], xs[ip], ys[ip])
+    theta_l, Reθ_l, H_l = [], [], []
 
-        # sample points along the normal
-        y_local = np.linspace(0.0, y_max, n_samples)
-        x_samp  = xs_i + nx * y_local
-        y_samp  = ys_i + ny * y_local
-        _, idxs = tree.query(np.column_stack([x_samp, y_samp]), k=1)
+    for i in range(n_pts):
+        im, ip = (i-1)%n_pts, (i+1)%n_pts
+        nx, ny = _normal_at_surface_point(xs[i], ys[i], xs[im], ys[im], xs[ip], ys[ip])
 
-        u_prof   = vol_u[idxs]
-        rho_prof = vol_rho[idxs]
-        mu_prof  = vol_mu[idxs]
+        y_loc  = np.linspace(0.0, y_max, n_samples)
+        pts_xy = np.column_stack((xs[i] + nx*y_loc,
+                                  ys[i] + ny*y_loc))
+        _, idx = tree.query(pts_xy, k=1)
 
-        # trim at u / u_e >= 0.99
-        mask = u_prof / u_prof[-1] < 0.99
-        if mask.any():
-            cut = np.where(~mask)[0][0] + 1  # include first ≥0.99 point
-            y_loc = y_local[:cut];  u_p = u_prof[:cut];  rho_p = rho_prof[:cut]
-            mu_e  = mu_prof[cut-1];  # last available μ
-        else:
-            y_loc, u_p, rho_p = y_local, u_prof, rho_prof
-            mu_e = mu_prof[-1]
+        u_prof, rho_prof, mu_prof = u_v[idx], rho_v[idx], mu_v[idx]
 
-        θ, δs, H = bl_integrals(y_loc, rho_p, u_p)
-        Re_theta = rho_p[-1]*u_p[-1]*θ / mu_e
+        # isolate boundary-layer part (u/ue < trim_ue)
+        j_cut = np.argmax(u_prof/u_prof[-1] >= trim_ue) + 1
+        y_bl, u_bl, rho_bl = y_loc[:j_cut], u_prof[:j_cut], rho_prof[:j_cut]
+        mu_e = mu_prof[j_cut-1]
 
-        theta_arr.append(θ); Re_theta_arr.append(Re_theta); H_arr.append(H)
+        θ, δ, H = _bl_integrals(y_bl, rho_bl, u_bl)
+        Reθ = rho_bl[-1]*u_bl[-1]*θ / mu_e
+
+        theta_l.append(θ); Reθ_l.append(Reθ); H_l.append(H)
 
     return dict(s=s_coord,
-                Re_theta=np.array(Re_theta_arr),
-                H=np.array(H_arr))
+                Re_theta=np.asarray(Reθ_l),
+                H       =np.asarray(H_l))
 
 
 
@@ -803,6 +812,33 @@ def align_pitch(y_norm, values):
 
     return y_rot, v_rot
 
+def start_end_half(y_norm, values):
+    """Return arrays starting at ``-0.5`` and ending at ``0.5``.
+
+    The first point is shifted to ``-0.5`` and appended again at ``+0.5`` to
+    ensure a closed distribution for periodic plots.
+    """
+
+    y_arr = np.asarray(y_norm, dtype=float)
+    v_arr = np.asarray(values, dtype=float)
+
+    if y_arr.size == 0:
+        return y_arr, v_arr
+
+    # sort and shift so the first element becomes -0.5
+    order = np.argsort(y_arr)
+    y_sorted = y_arr[order]
+    v_sorted = v_arr[order]
+
+    shift = y_sorted[0] + 0.5
+    y_shift = ((y_sorted - shift + 0.5) % 1.0) - 0.5
+
+    y_out = np.append(y_shift, y_shift[0] + 1.0)
+    v_out = np.append(v_sorted, v_sorted[0])
+
+    return y_out, v_out
+
+
 def SU2_organize(df):
     """
     Reorganizes the surface CSV data from SU2 to separate
@@ -859,9 +895,6 @@ def SU2_total_pressure_loss(
         alpha_m=0.0,
         atol=1e-4,
         smooth=False,
-        n_points=100,
-        s=1e-4,
-        method="savgol",
         window_length=15,
         polyorder=3,
 ):
@@ -876,17 +909,8 @@ def SU2_total_pressure_loss(
     ----------
     smooth : bool, optional
         If ``True`` the loss distribution is smoothed before returning.
-    n_points : int, optional
-        Number of points for the interpolated curve when ``smooth`` is ``True``
-        and ``method`` is ``"spline"``.
-    s : float, optional
-        Smoothing factor passed to :class:`UnivariateSpline`.
-    method : {{"spline", "savgol"}}, optional
-        Smoothing method to use when ``smooth`` is ``True``. ``"spline"`` uses a
-        :class:`UnivariateSpline` whereas ``"savgol"`` applies a
-        Savitzky–Golay filter.
     window_length : int, optional
-        Window length for the Savitzky–Golay filter.
+        Window length for the Savitzky–Golay filter when ``smooth`` is ``True``.
     polyorder : int, optional
         Polynomial order for the Savitzky–Golay filter.
     """
@@ -902,33 +926,22 @@ def SU2_total_pressure_loss(
     plane_df['y_norm'] = ((plane_df['y_norm'] - 0.1) % 1.0) - 0.5
     plane_df = plane_df.sort_values('y_norm').reset_index(drop=True)
 
+    y = plane_df['loss'].values
     if smooth:
-        x = plane_df['y_norm'].values
-        y = plane_df['loss'].values
-        if method == "savgol":
-            wl = window_length if window_length % 2 == 1 else window_length + 1
-            max_wl = len(y) if len(y) % 2 == 1 else len(y) - 1
+        wl = window_length if window_length % 2 == 1 else window_length + 1
+        max_wl = len(y) if len(y) % 2 == 1 else len(y) - 1
+        if wl > max_wl:
+            wl = max_wl
+        if wl < polyorder + 2:
+            wl = polyorder + 2
+            if wl % 2 == 0:
+                wl += 1
             if wl > max_wl:
                 wl = max_wl
-            min_wl = polyorder + 2
-            if min_wl % 2 == 0:
-                min_wl += 1
-            if wl < min_wl:
-                wl = min(max_wl, min_wl)
-            y_smooth = savgol_filter(y, wl, polyorder)
-            out = pd.DataFrame({'y_norm': x, 'loss': y_smooth})
-        else:
-            spl = UnivariateSpline(x, y, s=s)
-            x_i = np.linspace(-0.5, 0.5, n_points)
-            y_i = spl(x_i)
-            out = pd.DataFrame({'y_norm': x_i, 'loss': y_i})
-    else:
-        out = plane_df[['y_norm', 'loss']]
+        plane_df['loss'] = savgol_filter(y, wl, polyorder)
 
-    y_a, v_a = align_pitch(out['y_norm'].values, out['loss'].values)
-    return pd.DataFrame({'y_norm': y_a, 'loss': v_a})
-
-
+    y_out, v_out = start_end_half(plane_df['y_norm'].values, plane_df['loss'].values)
+    return pd.DataFrame({'y_norm': y_out, 'loss': v_out})
 
 def SU2_DataPlotting(
         sSSnorm,    # suction side arc fraction
@@ -1113,9 +1126,6 @@ def MISES_total_pressure_loss(
         x_plane,
         pitch,
         smooth=False,
-        n_points=200,
-        s=1e-4,
-        method="savgol",
         window_length=15,
         polyorder=3,
 ):
@@ -1130,13 +1140,6 @@ def MISES_total_pressure_loss(
     ----------
     smooth : bool, optional
         If ``True`` the loss distribution is smoothed before returning.
-    n_points : int, optional
-        Number of samples used when ``smooth`` is ``True`` and ``method`` is
-        ``"spline"``.
-    s : float, optional
-        Smoothing factor for :class:`UnivariateSpline`.
-    method : {"spline", "savgol"}, optional
-        Smoothing method when ``smooth`` is ``True``.
     window_length : int, optional
         Window length for the Savitzky–Golay filter.
     polyorder : int, optional
@@ -1160,35 +1163,25 @@ def MISES_total_pressure_loss(
         return None
 
     df = pd.DataFrame({'y_norm': y_vals, 'loss': loss_vals})
-    df['y_norm'] = ((df['y_norm'] - 0.1) % 1.0) - 0.5
+    df['y_norm'] = ((df['y_norm'] + 0.5) % 1.0) - 0.5
     df = df.sort_values('y_norm').reset_index(drop=True)
 
     if smooth:
-        x = df['y_norm'].values
         y = df['loss'].values
-        if method == "savgol":
-            wl = window_length if window_length % 2 == 1 else window_length + 1
-            max_wl = len(y) if len(y) % 2 == 1 else len(y) - 1
+        wl = window_length if window_length % 2 == 1 else window_length + 1
+        max_wl = len(y) if len(y) % 2 == 1 else len(y) - 1
+        if wl > max_wl:
+            wl = max_wl
+        if wl < polyorder + 2:
+            wl = polyorder + 2
+            if wl % 2 == 0:
+                wl += 1
             if wl > max_wl:
                 wl = max_wl
-            min_wl = polyorder + 2
-            if min_wl % 2 == 0:
-                min_wl += 1
-            if wl < min_wl:
-                wl = min(max_wl, min_wl)
-            y_smooth = savgol_filter(y, wl, polyorder)
-            out = pd.DataFrame({'y_norm': x, 'loss': y_smooth})
-        else:
-            spl = UnivariateSpline(x, y, s=s)
-            x_i = np.linspace(-0.5, 0.5, n_points)
-            y_i = spl(x_i)
-            out = pd.DataFrame({'y_norm': x_i, 'loss': y_i})
-    else:
-        out = df
+        df['loss'] = savgol_filter(y, wl, polyorder)
 
-    y_a, v_a = align_pitch(out['y_norm'].values, out['loss'].values)
-    return pd.DataFrame({'y_norm': y_a, 'loss': v_a})
-
+    y_out, v_out = start_end_half(df['y_norm'].values, df['loss'].values)
+    return pd.DataFrame({'y_norm': y_out, 'loss': v_out})
 
 def MISES_machDataGather(file_path):
     """
@@ -1291,40 +1284,3 @@ def MISES_DataGather(data, xNorm, y, n):
     
     return(xSSnorm, xPSnorm, dataSS, dataPS, dataSSTE)
 
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-#   Paraview Integration
-# ─────────────────────────────────────────────────────────────────────────────
-
-def launch_paraview_live(run_dir, bladeName, suffix):
-    """Open the volume VTU file in Paraview once it becomes available."""
-    volume_vtu = run_dir / f"volume_flow_{suffix}_{bladeName}.vtu"
-    while not volume_vtu.exists():
-        time.sleep(1)
-    '''    
-    #"""Open Paraview GUI with the live visualization macro."""
-    script_path = Path(__file__).resolve().parent / 'liveParaview_datablade.py'
-    paraview = shutil.which('paraview') or shutil.which('paraview.exe')
-    if paraview is None:
-        raise FileNotFoundError('paraview executable not found')
-    #os.environ["PATH"] = ";".join([*os.environ["PATH"].split(";"),"C:\\Program Files\\ParaView-5.12.0-MPI-Windows-Python3.10-msvc2017-AMD64\\bin",])
-    subprocess.Popen([
-        paraview,
-        f"--script={script_path}",
-        str(run_dir),
-        bladeName,
-        suffix,
-    ])'''
-    
-    
-def ask_view_live(blade_name: str) -> bool:
-    """Show a yes/no dialog asking whether to view the live simulation."""
-    root = tk.Tk()
-    root.withdraw()
-    resp = messagebox.askyesno(
-        title="Live simulation",
-        message=f"Would you like to review the live simulation of {blade_name}?",
-    )
-    root.destroy()
-    return resp
