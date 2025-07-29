@@ -4,16 +4,13 @@ Created on Mon Jul 28 10:45:23 2025
 
 @author: fredd
 
-Run turbulence intensity sensitivity study for a single blade.
+Turbulence intensity sweep analysis for SU2 blades.
 
-A small Tkinter dialog asks for the blade name and the TI sweep
-(start, end and step). For each TI value the usual SU2 workflow
-(mesh generation, solver run and post-processing) is executed.
-All results are saved in a dedicated folder under ``Blades/<blade>/results``.
-Finally two plots are produced in that directory:
-
-* ``mach_ti_sweep.svg``  – Mach number distribution coloured by TI.
-* ``ti_vs_rms.svg``      – RMS error versus turbulence intensity.
+Runs a series of SU2 simulations for a chosen blade while varying the
+incoming turbulence intensity. The mesh, solver and post-processing steps
+are executed for each intensity value and the resulting Mach distribution
+and RMS error are recorded. A colour-mapped plot of all Mach distributions
+and a plot of RMS error versus TI are saved in the study directory.
 """
 
 from __future__ import annotations
@@ -23,67 +20,108 @@ from tkinter import simpledialog
 from pathlib import Path
 from datetime import datetime
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-
+import pandas as pd
+import matplotlib.ticker as mticker
 import utils
 import mesh_datablade
 import configSU2_datablade
 import post_processing_datablade
 
 BLADEROOT = Path(__file__).resolve().parent
+DEFAULT_SUFFIX = "databladeVALIDATION"
+DEFAULT_EXT = "csv"
+DEFAULT_CORES = 12
 
 
-class TIRangeDialog(simpledialog.Dialog):
-    """Dialog asking for blade name and TI range."""
+class TIDialog(simpledialog.Dialog):
+    """Dialog asking for blade name and TI parameters."""
 
     def body(self, master):
         tk.Label(master, text="Blade name").grid(row=0, column=0, sticky="w")
-        self.name_var = tk.StringVar(value="Blade_1")
-        tk.Entry(master, textvariable=self.name_var).grid(row=0, column=1)
+        self.blade_var = tk.StringVar(value="Blade_1")
+        tk.Entry(master, textvariable=self.blade_var).grid(row=0, column=1)
 
-        tk.Label(master, text="TI start (%)").grid(row=1, column=0, sticky="w")
-        self.start_var = tk.DoubleVar(value=1.0)
+        tk.Label(master, text="TI start [%]").grid(row=1, column=0, sticky="w")
+        self.start_var = tk.StringVar(value="1.0")
         tk.Entry(master, textvariable=self.start_var).grid(row=1, column=1)
 
-        tk.Label(master, text="TI end (%)").grid(row=2, column=0, sticky="w")
-        self.end_var = tk.DoubleVar(value=5.0)
+        tk.Label(master, text="TI end [%]").grid(row=2, column=0, sticky="w")
+        self.end_var = tk.StringVar(value="5.0")
         tk.Entry(master, textvariable=self.end_var).grid(row=2, column=1)
 
-        tk.Label(master, text="Step (%)").grid(row=3, column=0, sticky="w")
-        self.step_var = tk.DoubleVar(value=0.5)
+        tk.Label(master, text="Step [%]").grid(row=3, column=0, sticky="w")
+        self.step_var = tk.StringVar(value="0.5")
         tk.Entry(master, textvariable=self.step_var).grid(row=3, column=1)
-        return master
+
+        return tk.Entry(master)
 
     def apply(self):
         self.result = (
-            self.name_var.get().strip(),
-            float(self.start_var.get()),
-            float(self.end_var.get()),
-            float(self.step_var.get()),
+            self.blade_var.get().strip(),
+            self.start_var.get().strip(),
+            self.end_var.get().strip(),
+            self.step_var.get().strip(),
         )
 
 
-def ask_inputs() -> tuple[str, float, float, float]:
+def ask_user_inputs():
     root = tk.Tk()
     root.withdraw()
-    dlg = TIRangeDialog(root, title="TI sweep")
+    dlg = TIDialog(root, title="TI sweep")
     root.destroy()
     if not dlg.result:
         raise SystemExit("Inputs required")
-    return dlg.result
+    blade, start, end, step = dlg.result
+    return blade, float(start), float(end), float(step)
 
 
-def _prepare_modules(blade: str, run_dir: Path, TI: float) -> dict:
-    """Set up global parameters for helper modules and return basics."""
+def load_mach_distribution(surf_csv: Path, P01: float, gamma: float):
+    """Return fractional surface coordinate and Mach array from a SU2 CSV."""
+    df = pd.read_csv(surf_csv)
+    _, _, ss, ps = utils.SU2_organize(df)
+    s_ss = utils.surface_fraction(ss["x"].values, ss["y"].values)
+    s_ps = utils.surface_fraction(ps["x"].values, ps["y"].values)
+    mach_ss = utils.compute_Mx(P01, ss["Pressure"].values, gamma)
+    mach_ps = utils.compute_Mx(P01, ps["Pressure"].values, gamma)
+    x = np.concatenate([-s_ps[::-1], s_ss])
+    mach = np.concatenate([mach_ps[::-1], mach_ss])
+    return x, mach
+
+
+def load_mises_distribution(mises_file: Path):
+    """Return fractional surface coordinate and Mach array from a MISES file."""
+    ps_f, ss_f, ps_m, ss_m = utils.MISES_machDataGather(mises_file)
+    if ps_f.size and ss_f.size:
+        frac = np.concatenate([-ps_f[::-1], ss_f])
+        mach = np.concatenate([ps_m[::-1], ss_m])
+        return frac, mach
+    return np.array([]), np.array([])
+
+
+def read_rms(summary_file: Path) -> float | None:
+    """Extract RMS error from ``summary_file`` if present."""
+    try:
+        lines = summary_file.read_text().splitlines()
+    except OSError:
+        return None
+    for line in lines:
+        if "Mach RMS error" in line:
+            try:
+                return float(line.split(":", 1)[1])
+            except Exception:
+                return None
+    return None
+
+
+def prepare_common(blade: str):
     blade_dir = BLADEROOT / "Blades" / blade
-    ises = blade_dir / "ises.databladeVALIDATION"
-    blade_file = blade_dir / "blade.databladeVALIDATION"
-    outlet_file = blade_dir / "outlet.databladeVALIDATION"
+    ises = blade_dir / f"ises.{DEFAULT_SUFFIX}"
+    blade_file = blade_dir / f"blade.{DEFAULT_SUFFIX}"
+    outlet_file = blade_dir / f"outlet.{DEFAULT_SUFFIX}"
 
     alpha1, alpha2, Re, M2, P2_P0a = utils.extract_from_ises(ises)
     pitch = utils.extract_from_blade(blade_file)
-
     geom0 = utils.compute_geometry(blade_file, pitch=pitch, d_factor_guess=0.5)
     d_factor = utils.compute_d_factor(
         np.degrees(geom0["wedge_angle"]),
@@ -116,199 +154,201 @@ def _prepare_modules(blade: str, run_dir: Path, TI: float) -> dict:
     dist_outlet = 1.5
     x_plane = 1.0
 
-    sizeCellFluid = 0.04 * axial_chord
-    sizeCellAirfoil = 0.02 * axial_chord
-    nCellAirfoil = 300
-    nCellPerimeter = 183
-    nBoundaryPoints = 50
-
-    bl = utils.compute_bl_parameters(
-        u2,
-        rho2,
-        mu,
-        axial_chord,
-        n_layers=25,
-        y_plus_target=1.0,
-        x_ref_yplus=1 / 1000,
-    )
+    bl = utils.compute_bl_parameters(u2, rho2, mu, axial_chord, n_layers=25, y_plus_target=1.0)
     first_layer_height = bl["first_layer_height"]
     bl_growth = bl["bl_growth"]
     bl_thickness = bl["bl_thickness"]
-    size_LE = 0.1 * sizeCellAirfoil
-    dist_LE = 0.01 * axial_chord
-    size_TE = 0.1 * sizeCellAirfoil
-    dist_TE = 0.01 * axial_chord
 
-    VolWAkeIn = 0.35 * sizeCellFluid
-    VolWAkeOut = sizeCellFluid
-    WakeXMin = 0.1 * axial_chord
-    WakeXMax = (dist_outlet + 0.5) * axial_chord
+    params = dict(
+        blade_dir=blade_dir,
+        ises=ises,
+        blade_file=blade_file,
+        outlet_file=outlet_file,
+        alpha1_deg=alpha1_deg,
+        alpha2_deg=alpha2_deg,
+        d_factor=d_factor,
+        stagger=stagger,
+        axial_chord=axial_chord,
+        chord=chord,
+        pitch=pitch,
+        pitch2chord=pitch2chord,
+        R=R,
+        gamma=gamma,
+        mu=mu,
+        T01=T01,
+        P1=P1,
+        P01=P01,
+        M1=M1,
+        P2=P2,
+        P2_P0a=P2_P0a,
+        M2=M2,
+        T02=T02,
+        T2=T2,
+        c2=c2,
+        u2=u2,
+        rho2=rho2,
+        Re=Re,
+        dist_inlet=dist_inlet,
+        dist_outlet=dist_outlet,
+        x_plane=x_plane,
+        first_layer_height=first_layer_height,
+        bl_growth=bl_growth,
+        bl_thickness=bl_thickness,
+        size_LE=0.1 * 0.02 * axial_chord,
+        dist_LE=0.01 * axial_chord,
+        size_TE=0.1 * 0.02 * axial_chord,
+        dist_TE=0.01 * axial_chord,
+        VolWAkeIn=0.35 * 0.04 * axial_chord,
+        VolWAkeOut=0.04 * axial_chord,
+        WakeXMin=0.1 * axial_chord,
+        WakeXMax=(dist_outlet + 1) * axial_chord,
+    )
+    return params
 
+
+def configure_modules(run_dir: Path, blade: str, TI: float, params: dict) -> None:
     for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
         mod.bladeName = blade
-        mod.no_cores = 12
-        mod.string = "databladeVALIDATION"
-        mod.fileExtension = "csv"
+        mod.no_cores = DEFAULT_CORES
+        mod.string = DEFAULT_SUFFIX
+        mod.fileExtension = DEFAULT_EXT
         mod.base_dir = BLADEROOT
-        mod.blade_dir = blade_dir
+        mod.blade_dir = params["blade_dir"]
         mod.run_dir = run_dir
-        mod.isesFilePath = ises
-        mod.bladeFilePath = blade_file
-        mod.outletFilePath = outlet_file
-
-        mod.alpha1 = alpha1_deg
-        mod.alpha2 = alpha2_deg
-        mod.d_factor = d_factor
-        mod.stagger = stagger
-        mod.axial_chord = axial_chord
-        mod.chord = chord
-        mod.pitch = pitch
-        mod.pitch2chord = pitch2chord
-
-        mod.R = R
-        mod.gamma = gamma
-        mod.mu = mu
-        mod.T01 = T01
-        mod.P1 = P1
-        mod.P01 = P01
-        mod.M1 = M1
-        mod.P2 = P2
-        mod.P2_P0a = P2_P0a
-        mod.M2 = M2
-        mod.T02 = T02
-        mod.T2 = T2
-        mod.c2 = c2
-        mod.u2 = u2
-        mod.rho2 = rho2
-        mod.Re = Re
+        mod.isesFilePath = params["ises"]
+        mod.bladeFilePath = params["blade_file"]
+        mod.outletFilePath = params["outlet_file"]
+        mod.alpha1 = params["alpha1_deg"]
+        mod.alpha2 = params["alpha2_deg"]
+        mod.d_factor = params["d_factor"]
+        mod.stagger = params["stagger"]
+        mod.axial_chord = params["axial_chord"]
+        mod.chord = params["chord"]
+        mod.pitch = params["pitch"]
+        mod.pitch2chord = params["pitch2chord"]
+        mod.R = params["R"]
+        mod.gamma = params["gamma"]
+        mod.mu = params["mu"]
+        mod.T01 = params["T01"]
+        mod.P1 = params["P1"]
+        mod.P01 = params["P01"]
+        mod.M1 = params["M1"]
+        mod.P2 = params["P2"]
+        mod.P2_P0a = params["P2_P0a"]
+        mod.M2 = params["M2"]
+        mod.T02 = params["T02"]
+        mod.T2 = params["T2"]
+        mod.c2 = params["c2"]
+        mod.u2 = params["u2"]
+        mod.rho2 = params["rho2"]
+        mod.Re = params["Re"]
         mod.TI = TI
-
-        mod.dist_inlet = dist_inlet
-        mod.dist_outlet = dist_outlet
-        mod.x_plane = x_plane
-        mod.sizeCellFluid = sizeCellFluid
-        mod.sizeCellAirfoil = sizeCellAirfoil
-        mod.nCellAirfoil = nCellAirfoil
-        mod.nCellPerimeter = nCellPerimeter
-        mod.nBoundaryPoints = nBoundaryPoints
-        mod.first_layer_height = first_layer_height
-        mod.bl_growth = bl_growth
-        mod.bl_thickness = bl_thickness
-        mod.size_LE = size_LE
-        mod.dist_LE = dist_LE
-        mod.size_TE = size_TE
-        mod.dist_TE = dist_TE
-        mod.VolWAkeIn = VolWAkeIn
-        mod.VolWAkeOut = VolWAkeOut
-        mod.WakeXMin = WakeXMin
-        mod.WakeXMax = WakeXMax
-
-    return {
-        "P01": P01,
-        "gamma": gamma,
-        "blade_dir": blade_dir,
-    }
+        mod.dist_inlet = params["dist_inlet"]
+        mod.dist_outlet = params["dist_outlet"]
+        mod.x_plane = params["x_plane"]
+        mod.first_layer_height = params["first_layer_height"]
+        mod.bl_growth = params["bl_growth"]
+        mod.bl_thickness = params["bl_thickness"]
+        mod.sizeCellFluid = 0.04 * params["axial_chord"]
+        mod.sizeCellAirfoil = 0.02 * params["axial_chord"]
+        mod.nCellAirfoil = 300
+        mod.nCellPerimeter = 183
+        mod.nBoundaryPoints = 50
+        mod.size_LE = params["size_LE"]
+        mod.dist_LE = params["dist_LE"]
+        mod.size_TE = params["size_TE"]
+        mod.dist_TE = params["dist_TE"]
+        mod.VolWAkeIn = params["VolWAkeIn"]
+        mod.VolWAkeOut = params["VolWAkeOut"]
+        mod.WakeXMin = params["WakeXMin"]
+        mod.WakeXMax = params["WakeXMax"]
 
 
-def _compute_distributions(run_dir: Path, blade: str, P01: float, gamma: float):
-    surf = run_dir / f"surface_flowdatabladeVALIDATION_{blade}.csv"
-    df = pd.read_csv(surf)
-    _, _, ss, ps = utils.SU2_organize(df)
-    sss = utils.surface_fraction(ss["x"].values, ss["y"].values)
-    sps = utils.surface_fraction(ps["x"].values, ps["y"].values)
-    mach_ss = utils.compute_Mx(P01, ss["Pressure"].values, gamma)
-    mach_ps = utils.compute_Mx(P01, ps["Pressure"].values, gamma)
-    return sss, sps, mach_ss, mach_ps
-
-
-def _compute_rms(blade_dir: Path, blade: str, sss, sps, mach_ss, mach_ps):
-    mfile = blade_dir / "machDistribution.databladeVALIDATION"
-    ps_frac, ss_frac, ps_mach, ss_mach = utils.MISES_machDataGather(mfile)
-    if len(ps_frac) == 0 and len(ss_frac) == 0:
-        return np.nan
-    su2_ss = np.interp(ss_frac, sss, mach_ss)
-    su2_ps = np.interp(ps_frac, sps, mach_ps)
-    diff = np.concatenate([su2_ss - ss_mach, su2_ps - ps_mach])
-    return float(np.sqrt(np.nanmean(diff ** 2)) * 100)
-
-
-def run_one(
-    blade: str, run_dir: Path, TI: float
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
-    params = _prepare_modules(blade, run_dir, TI)
+def run_once(run_dir: Path, blade: str, TI: float, params: dict):
+    configure_modules(run_dir, blade, TI, params)
     mesh_datablade.mesh_datablade()
     configSU2_datablade.configSU2_datablade()
-    proc, logf = configSU2_datablade.runSU2_datablade(background=True)
-    proc.wait()
-    logf.close()
-    configSU2_datablade._summarize_su2_log(run_dir / "su2.log")
+    configSU2_datablade.runSU2_datablade()
     post_processing_datablade.post_processing_datablade()
 
-    sss, sps, mach_ss, mach_ps = _compute_distributions(
-        run_dir, blade, params["P01"], params["gamma"]
-    )
-    rms = _compute_rms(params["blade_dir"], blade, sss, sps, mach_ss, mach_ps)
-    return sss, sps, mach_ss, mach_ps, rms
+    surf_csv = run_dir / f"surface_flow{DEFAULT_SUFFIX}_{blade}.csv"
+    frac, mach = load_mach_distribution(surf_csv, params["P01"], params["gamma"])
+    rms = read_rms(run_dir / "run_summary.txt")
+    return frac, mach, rms
 
 
 def main():
-    blade, start, end, step = ask_inputs()
-    tis = np.arange(start, end + 1e-9, step)
+    blade, ti_start, ti_end, ti_step = ask_user_inputs()
+    params = prepare_common(blade)
 
-    results_dir = BLADEROOT / "Blades" / blade / "results"
-    results_dir.mkdir(exist_ok=True)
-    sweep_dir = results_dir / f"TISweep_{datetime.now().strftime('%d-%m-%Y_%H%M')}"
-    sweep_dir.mkdir()
+    mises_file = params["blade_dir"] / f"machDistribution.{DEFAULT_SUFFIX}"
+    mises_frac, mises_mach = load_mises_distribution(mises_file)
 
-    ss_fracs: list[np.ndarray] = []
-    ps_fracs: list[np.ndarray] = []
-    ss_machs: list[np.ndarray] = []
-    ps_machs: list[np.ndarray] = []
-    rms_vals: list[float] = []
+    run_root = params["blade_dir"] / "results"
+    run_root.mkdir(exist_ok=True)
+    study_dir = run_root / f"TISweep_{datetime.now().strftime('%d-%m-%Y_%H%M')}"
+    study_dir.mkdir()
+
+    tis = np.arange(ti_start, ti_end + 0.001, ti_step)
+
+    all_frac = []
+    all_mach = []
+    rms_vals = []
+    ti_vals = []
 
     for TI in tis:
-        run_dir = sweep_dir / f"TI_{TI:.1f}".replace(".", "p")
+        run_dir = study_dir / f"TI_{TI:.1f}".replace(".", "p")
         run_dir.mkdir()
-        ssf, psf, ssm, psm, rms = run_one(blade, run_dir, TI)
-        ss_fracs.append(ssf)
-        ps_fracs.append(psf)
-        ss_machs.append(ssm)
-        ps_machs.append(psm)
+        frac, mach, rms = run_once(run_dir, blade, TI, params)
+        all_frac.append(frac)
+        all_mach.append(mach)
         rms_vals.append(rms)
+        ti_vals.append(TI)
 
-    np.savez_compressed(
-        sweep_dir / "ti_sweep.npz",
-        tis=tis,
-        ss_fracs=np.array(ss_fracs, dtype=object),
-        ps_fracs=np.array(ps_fracs, dtype=object),
-        ss_machs=np.array(ss_machs, dtype=object),
-        ps_machs=np.array(ps_machs, dtype=object),
-        rms=np.array(rms_vals),
-    )
+    cmap = plt.get_cmap("viridis")
+    norm = plt.Normalize(ti_start, ti_end)
 
-    cmap = plt.cm.viridis
-    norm = plt.Normalize(vmin=start, vmax=end)
-    colors = cmap(norm(tis))
     fig, ax = plt.subplots(figsize=(6, 4))
-    for col, ssf, psf, ssm, psm in zip(colors, ss_fracs, ps_fracs, ss_machs, ps_machs):
-        ax.plot(ssf, ssm, color=col)
-        ax.plot(psf, psm, color=col, linestyle="--")
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])
-    fig.colorbar(sm, ax=ax, label="TI [%]")
-    ax.set_xlabel(r"$s/s_{total}$")
-    ax.set_ylabel("Mach")
-    ax.set_xlim(0, 1)
+    for f, m, ti in zip(all_frac, all_mach, ti_vals):
+        ax.plot(np.abs(f), m, color=cmap(norm(ti)))
+    if mises_frac.size:
+        ax.scatter(np.abs(mises_frac), mises_mach, s=2, facecolors="none",
+                   edgecolors="k", label="MISES", zorder=5)
+    ax.set_xlabel("Surface fraction")
+    ax.set_ylabel("Mach number")
+    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+    cbar = fig.colorbar(sm, ax=ax)
+    cbar.set_label("Turbulence intensity [\%]")
+    if mises_frac.size:
+        ax.legend()
     fig.tight_layout()
-    fig.savefig(sweep_dir / "mach_ti_sweep.svg", format="svg")
+    fig.savefig(study_dir / "mach_distributions.png", dpi=300)
 
-    plt.figure(figsize=(6, 4))
-    plt.plot(tis, rms_vals, "o-")
-    plt.xlabel("Turbulence intensity [%]")
-    plt.ylabel("Mach RMS error [%]")
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(sweep_dir / "ti_vs_rms.svg", format="svg")
+    # Store Mach data for later use
+    s_base = np.abs(all_frac[0])
+    mach_df = pd.DataFrame({"s": s_base})
+    for val, frac, mach in zip(ti_vals, all_frac, all_mach):
+        x_abs = np.abs(frac)
+        if not np.allclose(x_abs, s_base):
+            mach_interp = np.interp(s_base, x_abs, mach)
+        else:
+            mach_interp = mach
+        mach_df[f"TI_{val:.1f}"] = mach_interp
+    mach_df.to_csv(study_dir / "mach_distributions.csv", index=False)
+
+    # ── RMS‑vs‑TI plot ─────────────────────────────────────────────
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.plot(ti_vals, rms_vals, "o-")
+    ax.set_xlabel(r"Turbulence intensity [\%]")  # escaped ‘%’ as before
+    ax.set_ylabel("Mach RMS error")
+    
+    # format y‑axis numbers to two decimals
+    ax.yaxis.set_major_formatter(mticker.FormatStrFormatter('%.2f'))
+    fig.tight_layout()
+    fig.savefig(study_dir / "rms_vs_ti.png", dpi=300)
+
+    rms_df = pd.DataFrame({"TI": ti_vals, "rms": np.round(rms_vals, 3)})
+    rms_df.to_csv(study_dir / "rms_results.csv", index=False)
 
 
 if __name__ == "__main__":

@@ -27,12 +27,13 @@ plt.rcParams.update({
 
 HEADERS = ["Geometry Preprocessing", "Performance Summary"]
 
+#Ordered by Outlet flow angle (largest to lowest)
 ORDER_RIGHT_TO_LEFT = [
-    "Blade 6", "Blade 8", "Blade 13", "Blade 2", "Blade 4", "Blade 5",
-    "Blade 14", "Blade 15", "Blade 19", "Blade 18", "Blade 22", "Blade 16",
-    "Blade 3", "Blade 26", "Blade 1", "Blade 23", "Blade 21", "Blade 17",
-    "Blade 24", "Blade 11", "Blade 12", "Blade 7", "Blade 9", "Blade 10",
-    "Blade 20", "Blade 25", "Blade 0"          # keep Blade 0 last
+    "Blade 6", "Blade 8", "Blade 18", "Blade 16", "Blade 17", "Blade 26",
+    "Blade 19", "Blade 13", "Blade 22", "Blade 21", "Blade 15", "Blade 2",
+    "Blade 4", "Blade 5", "Blade 14", "Blade 3", "Blade 20", "Blade 24",
+    "Blade 25", "Blade 7", "Blade 23", "Blade 1", "Blade 12", "Blade 11",
+    "Blade 10", "Blade 9", "Blade 0"          # keep Blade 0 last
 ]
 
 # ────────── TK helpers ───────────────────────────────────────────────────────

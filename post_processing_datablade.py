@@ -259,20 +259,13 @@ def post_processing_datablade():
     p_plane = (x_plane + 1) * axial_chord
     
     su2_res = SU2_total_pressure_loss(
-        vol_df,
-        p_plane,
-        pitch,
-        P01,
-        alpha2,
-        atol=sizeCellFluid/2,
-        smooth=True,
-        window_length=15,
-        polyorder=4,
-    )  # order: n_points 10^2 - s 10^-3
+        vol_df, p_plane, pitch, P01, alpha2,
+        atol=sizeCellFluid/2, smooth=True, window_length=15, polyorder=4)  # order: n_points 10^2 - s 10^-3
     su2_pitch, su2_loss = su2_res['y_norm'], su2_res['loss']
     
     mises_res = MISES_total_pressure_loss(
-        mises_fieldFile, p_plane, pitch, smooth=True, window_length=15, polyorder=3)
+        mises_fieldFile, p_plane, pitch, P01,
+        atol=0.1*axial_chord, smooth=True, window_length=15, polyorder=4)
     if mises_res is not None:
         mises_pitch, mises_loss = mises_res['y_norm'], mises_res['loss']
     else:

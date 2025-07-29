@@ -1121,13 +1121,69 @@ def MISES_fieldDataGather(file_path):
     return all_x, all_y, all_rho, all_p, all_u, all_v, all_q, all_m
 
 
+def MISES_extract_plane_data(field_file, x_plane, pitch, atol=1e-4):
+    """Extract data at a given ``x_plane`` from a MISES ``field`` file.
+
+    Parameters
+    ----------
+    field_file : str or Path
+        Path to the ``field`` file produced by MISES.
+    x_plane : float
+        Axial location for the extraction.
+    pitch : float
+        Blade pitch used to normalise the ``y`` coordinate.
+    atol : float, optional
+        Absolute tolerance applied when matching ``x_plane``.
+    """
+    all_x, all_y, _, all_p, all_m, *_ = MISES_fieldDataGather(field_file)
+
+    y_vals = []
+    p_vals = []
+    m_vals = []
+
+    for x_arr, y_arr, p_arr, m_arr in zip(all_x, all_y, all_p, all_m):
+        if not x_arr:
+            continue
+
+        x_arr = np.asarray(x_arr)
+        y_arr = np.asarray(y_arr)
+        p_arr = np.asarray(p_arr)
+        m_arr = np.asarray(m_arr)
+
+        mask = np.isclose(x_arr, x_plane, atol=atol)
+        if mask.any():
+            y_vals.extend(y_arr[mask] / pitch)
+            p_vals.extend(p_arr[mask])
+            m_vals.extend(m_arr[mask])
+            continue
+
+        if x_plane >= x_arr.min() and x_plane <= x_arr.max():
+            y_val = np.interp(x_plane, x_arr, y_arr)
+            p_val = np.interp(x_plane, x_arr, p_arr)
+            m_val = np.interp(x_plane, x_arr, m_arr)
+            y_vals.append(y_val / pitch)
+            p_vals.append(p_val)
+            m_vals.append(m_val)
+
+    if not p_vals:
+        print(f"[WARNING] No data found at x = {x_plane} (tol={atol}). Try increasing tolerance.")
+        return None
+
+    df = pd.DataFrame({'y_norm': y_vals, 'p_norm': p_vals, 'M':m_vals})
+    df['y_norm'] = ((df['y_norm'] + 0.5) % 1.0) - 0.5
+    df = df.sort_values('y_norm').reset_index(drop=True)
+    return df
+
+
 def MISES_total_pressure_loss(
         field_file,
         x_plane,
         pitch,
+        P01,
         smooth=False,
         window_length=15,
         polyorder=3,
+        atol=1e-4,
 ):
     """Return total pressure loss from a MISES ``field`` file.
 
@@ -1145,27 +1201,15 @@ def MISES_total_pressure_loss(
     polyorder : int, optional
         Polynomial order for the Savitzky–Golay filter.
     """
-    all_x, all_y, _, all_p, *_ = MISES_fieldDataGather(field_file)
-
-    y_vals = []
-    loss_vals = []
-    for x_arr, y_arr, p_arr in zip(all_x, all_y, all_p):
-        if not x_arr:
-            continue
-        if x_plane < min(x_arr) or x_plane > max(x_arr):
-            continue
-        y_val = np.interp(x_plane, x_arr, y_arr)
-        p_norm = np.interp(x_plane, x_arr, p_arr)
-        y_vals.append(y_val / pitch)
-        loss_vals.append(1.0 - p_norm)
-
-    if not loss_vals:
+    df = MISES_extract_plane_data(field_file, x_plane, pitch, atol)
+    if df is None:
         return None
-
-    df = pd.DataFrame({'y_norm': y_vals, 'loss': loss_vals})
-    df['y_norm'] = ((df['y_norm'] + 0.5) % 1.0) - 0.5
-    df = df.sort_values('y_norm').reset_index(drop=True)
-
+  
+    p0 = compute_total_pressure(P01 * df['p_norm'].values,
+                                df['M'].values, gamma=1.4)
+    P0_in = P01
+    df['loss'] = (P0_in - p0) / P0_in
+    
     if smooth:
         y = df['loss'].values
         wl = window_length if window_length % 2 == 1 else window_length + 1
@@ -1182,6 +1226,7 @@ def MISES_total_pressure_loss(
 
     y_out, v_out = start_end_half(df['y_norm'].values, df['loss'].values)
     return pd.DataFrame({'y_norm': y_out, 'loss': v_out})
+
 
 def MISES_machDataGather(file_path):
     """

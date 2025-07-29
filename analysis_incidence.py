@@ -316,7 +316,7 @@ def main():
     for f, m, offs in zip(all_frac, all_mach, offset_vals):
         ax.plot(np.abs(f), m, color=cmap(norm(offs)))
     if mises_frac.size:
-        ax.scatter(np.abs(mises_frac), mises_mach, s=5, facecolors="none",
+        ax.scatter(np.abs(mises_frac), mises_mach, s=2, facecolors="none",
                    edgecolors="k", label="MISES", zorder=5)
     ax.set_xlabel("Surface fraction")
     ax.set_ylabel("Mach number")
@@ -343,7 +343,7 @@ def main():
     plt.figure(figsize=(6, 4))
     plt.plot(offset_vals, rms_vals, "o-")
     plt.xlabel("Incidence offset [deg]")
-    plt.ylabel("Mach RMS error")
+    plt.ylabel("Mach RMS error [\%]")
     plt.tight_layout()
     plt.savefig(study_dir / "rms_vs_incidence.png", dpi=300)
 
