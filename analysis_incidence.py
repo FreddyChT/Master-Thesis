@@ -89,6 +89,16 @@ def load_mach_distribution(surf_csv: Path, P01: float, gamma: float):
     return x, mach
 
 
+def load_mises_distribution(mises_file: Path):
+    """Return fractional surface coordinate and Mach array from a MISES file."""
+    ps_f, ss_f, ps_m, ss_m = utils.MISES_machDataGather(mises_file)
+    if ps_f.size and ss_f.size:
+        frac = np.concatenate([-ps_f[::-1], ss_f])
+        mach = np.concatenate([ps_m[::-1], ss_m])
+        return frac, mach
+    return np.array([]), np.array([])
+
+
 def read_rms(summary_file: Path) -> float | None:
     """Extract RMS error from ``summary_file`` if present."""
     try:
@@ -271,6 +281,9 @@ def main():
     blade, inc_start, inc_end, inc_step = ask_user_inputs()
     params = prepare_common(blade)
 
+    mises_file = params["blade_dir"] / f"machDistribution.{DEFAULT_SUFFIX}"
+    mises_frac, mises_mach = load_mises_distribution(mises_file)
+
     run_root = params["blade_dir"] / "results"
     run_root.mkdir(exist_ok=True)
     study_dir = run_root / f"IncStudy_{datetime.now().strftime('%d-%m-%Y_%H%M')}"
@@ -283,38 +296,59 @@ def main():
     all_mach = []
     rms_vals = []
     alpha_vals = []
+    offset_vals = []
 
     for offset in angles:
         angle = base_alpha + offset
-        run_dir = study_dir / f"inc_{angle:+.1f}"
+        run_dir = study_dir / f"inc_{offset:+.1f}"
         run_dir.mkdir()
         frac, mach, rms = run_once(run_dir, blade, angle, params)
         all_frac.append(frac)
         all_mach.append(mach)
         rms_vals.append(rms)
         alpha_vals.append(angle)
+        offset_vals.append(offset)
 
     cmap = plt.get_cmap("viridis")
-    norm = plt.Normalize(min(alpha_vals), max(alpha_vals))
+    norm = plt.Normalize(inc_start, inc_end)
 
     fig, ax = plt.subplots(figsize=(6, 4))
-    for f, m, a in zip(all_frac, all_mach, alpha_vals):
-        ax.plot(f, m, color=cmap(norm(a)))
+    for f, m, offs in zip(all_frac, all_mach, offset_vals):
+        ax.plot(np.abs(f), m, color=cmap(norm(offs)))
+    if mises_frac.size:
+        ax.scatter(np.abs(mises_frac), mises_mach, s=5, facecolors="none",
+                   edgecolors="k", label="MISES", zorder=5)
     ax.set_xlabel("Surface fraction")
     ax.set_ylabel("Mach number")
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
     cbar = fig.colorbar(sm, ax=ax)
-    cbar.set_label("Incidence [deg]")
+    cbar.set_label("Incidence offset [deg]")
+    if mises_frac.size:
+        ax.legend()
     fig.tight_layout()
     fig.savefig(study_dir / "mach_distributions.png", dpi=300)
 
+    # Store Mach data for later use
+    s_base = np.abs(all_frac[0])
+    mach_df = pd.DataFrame({"s": s_base})
+    for offs, frac, mach in zip(offset_vals, all_frac, all_mach):
+        x_abs = np.abs(frac)
+        if not np.allclose(x_abs, s_base):
+            mach_interp = np.interp(s_base, x_abs, mach)
+        else:
+            mach_interp = mach
+        mach_df[f"inc_{offs:+.1f}"] = mach_interp
+    mach_df.to_csv(study_dir / "mach_distributions.csv", index=False)
+
     plt.figure(figsize=(6, 4))
-    plt.plot(alpha_vals, rms_vals, "o-")
-    plt.xlabel("Incidence [deg]")
+    plt.plot(offset_vals, rms_vals, "o-")
+    plt.xlabel("Incidence offset [deg]")
     plt.ylabel("Mach RMS error")
-    plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.savefig(study_dir / "rms_vs_incidence.png", dpi=300)
+
+    rms_df = pd.DataFrame({"alpha": alpha_vals, "offset": offset_vals, "rms": rms_vals})
+    rms_df.to_csv(study_dir / "rms_results.csv", index=False)
 
 
 if __name__ == "__main__":

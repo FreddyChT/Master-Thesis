@@ -39,7 +39,7 @@ class TIRangeDialog(simpledialog.Dialog):
 
     def body(self, master):
         tk.Label(master, text="Blade name").grid(row=0, column=0, sticky="w")
-        self.name_var = tk.StringVar(value="Blade_0")
+        self.name_var = tk.StringVar(value="Blade_1")
         tk.Entry(master, textvariable=self.name_var).grid(row=0, column=1)
 
         tk.Label(master, text="TI start (%)").grid(row=1, column=0, sticky="w")
@@ -232,7 +232,9 @@ def _compute_rms(blade_dir: Path, blade: str, sss, sps, mach_ss, mach_ps):
     return float(np.sqrt(np.nanmean(diff ** 2)) * 100)
 
 
-def run_one(blade: str, run_dir: Path, TI: float) -> tuple[np.ndarray, np.ndarray, float]:
+def run_one(
+    blade: str, run_dir: Path, TI: float
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
     params = _prepare_modules(blade, run_dir, TI)
     mesh_datablade.mesh_datablade()
     configSU2_datablade.configSU2_datablade()
@@ -246,9 +248,7 @@ def run_one(blade: str, run_dir: Path, TI: float) -> tuple[np.ndarray, np.ndarra
         run_dir, blade, params["P01"], params["gamma"]
     )
     rms = _compute_rms(params["blade_dir"], blade, sss, sps, mach_ss, mach_ps)
-    frac = np.concatenate([-sps, sss])
-    mach = np.concatenate([mach_ps, mach_ss])
-    return frac, mach, rms
+    return sss, sps, mach_ss, mach_ps, rms
 
 
 def main():
@@ -260,31 +260,47 @@ def main():
     sweep_dir = results_dir / f"TISweep_{datetime.now().strftime('%d-%m-%Y_%H%M')}"
     sweep_dir.mkdir()
 
-    all_frac: list[np.ndarray] = []
-    all_mach: list[np.ndarray] = []
+    ss_fracs: list[np.ndarray] = []
+    ps_fracs: list[np.ndarray] = []
+    ss_machs: list[np.ndarray] = []
+    ps_machs: list[np.ndarray] = []
     rms_vals: list[float] = []
 
     for TI in tis:
         run_dir = sweep_dir / f"TI_{TI:.1f}".replace(".", "p")
         run_dir.mkdir()
-        frac, mach, rms = run_one(blade, run_dir, TI)
-        all_frac.append(frac)
-        all_mach.append(mach)
+        ssf, psf, ssm, psm, rms = run_one(blade, run_dir, TI)
+        ss_fracs.append(ssf)
+        ps_fracs.append(psf)
+        ss_machs.append(ssm)
+        ps_machs.append(psm)
         rms_vals.append(rms)
 
+    np.savez_compressed(
+        sweep_dir / "ti_sweep.npz",
+        tis=tis,
+        ss_fracs=np.array(ss_fracs, dtype=object),
+        ps_fracs=np.array(ps_fracs, dtype=object),
+        ss_machs=np.array(ss_machs, dtype=object),
+        ps_machs=np.array(ps_machs, dtype=object),
+        rms=np.array(rms_vals),
+    )
+
     cmap = plt.cm.viridis
-    colors = cmap(np.linspace(0, 1, len(tis)))
-    plt.figure(figsize=(6, 4))
-    for ti, frac, mach, col in zip(tis, all_frac, all_mach, colors):
-        plt.plot(abs(frac), mach, color=col, label=f"{ti:.1f} %")
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(tis.min(), tis.max()))
+    norm = plt.Normalize(vmin=start, vmax=end)
+    colors = cmap(norm(tis))
+    fig, ax = plt.subplots(figsize=(6, 4))
+    for col, ssf, psf, ssm, psm in zip(colors, ss_fracs, ps_fracs, ss_machs, ps_machs):
+        ax.plot(ssf, ssm, color=col)
+        ax.plot(psf, psm, color=col, linestyle="--")
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
-    plt.colorbar(sm, label="TI [%]")
-    plt.xlabel(r"$s/s_{total}$")
-    plt.ylabel("Mach")
-    plt.xlim(-1, 1)
-    plt.tight_layout()
-    plt.savefig(sweep_dir / "mach_ti_sweep.svg", format="svg")
+    fig.colorbar(sm, ax=ax, label="TI [%]")
+    ax.set_xlabel(r"$s/s_{total}$")
+    ax.set_ylabel("Mach")
+    ax.set_xlim(0, 1)
+    fig.tight_layout()
+    fig.savefig(sweep_dir / "mach_ti_sweep.svg", format="svg")
 
     plt.figure(figsize=(6, 4))
     plt.plot(tis, rms_vals, "o-")
