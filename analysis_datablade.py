@@ -20,12 +20,6 @@ import mesh_datablade
 import configSU2_datablade
 import post_processing_datablade
 
-# You will need the following files to run this analysis:
-# - Ises file
-# - Blade file
-# - Gridpar file
-# - Mach Distribution file
-# Others to be determined when checking other files
 
 # ---------------------- USER PARAMETERS ----------------------
 # Defaults can be overridden from the command line
@@ -262,7 +256,6 @@ def main():
         # --- BLADE DATA EXTRACTION 
         alpha1, alpha2, Re, M2, P2_P0a = utils.extract_from_ises(isesFilePath)
         pitch = utils.extract_from_blade(bladeFilePath)
-        #M1, P21_ratio = utils.extract_from_outlet(outletFilePath)
     
         # ─────────────────────────────────────────────────────────────────────────────
         #   BLADE GEOMETRY 
@@ -285,7 +278,7 @@ def main():
         #   BOUNDARY CONDITIONS 
         # ───────────────────────────────────────────────────────────────────────────── 
         R = 287.058 #[J/kg K]
-        gamma = 1.4
+        gamma = 1.4 #[-]
         mu = 1.846e-5 #[kg/m s] # Obtained from table online @T=300
         T01 = 300 #[K]
         P1, P01 = utils.freestream_total_pressure(Re, M2, axial_chord, T01)

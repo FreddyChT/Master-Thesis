@@ -246,14 +246,6 @@ def post_processing_datablade():
     SU2_DataPlotting(s_normSS, s_normPS, friction_coeffSS, friction_coeffPS,
                  "Skin Friction Coefficient", string, run_dir, bladeName, mirror_PS=True,
                  exp_s=blade_frac_bl, exp_data=cf_bl)
-
-    SU2_DataPlotting(s_normSS, s_normPS, Re_theta_SS, Re_theta_PS,
-                 "Re_theta", string, run_dir, bladeName, mirror_PS=True,
-                 exp_s=blade_frac_bl, exp_data=Re_t_bl)
-
-    SU2_DataPlotting(s_normSS, s_normPS, H_SS, H_PS, 
-                 "Shape Factor", string, run_dir, bladeName, mirror_PS=True,
-                 exp_s=blade_frac_bl, exp_data=H_bl)
     
     
     p_plane = (x_plane + 1) * axial_chord

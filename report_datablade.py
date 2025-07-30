@@ -27,13 +27,35 @@ plt.rcParams.update({
 
 HEADERS = ["Geometry Preprocessing", "Performance Summary"]
 
-#Ordered by Outlet flow angle (largest to lowest)
+
 ORDER_RIGHT_TO_LEFT = [
+    #Ordered by Inlet flow angle (largest to lowest)
+#    "Blade 13", "Blade 1", "Blade 19", "Blade 6", "Blade 8", "Blade 15",
+#    "Blade 2", "Blade 4", "Blade 5", "Blade 14", "Blade 23", "Blade 18",
+#    "Blade 3", "Blade 26", "Blade 22", "Blade 21", "Blade 12", "Blade 11",
+#    "Blade 7", "Blade 10", "Blade 16", "Blade 17", "Blade 20", "Blade 24",
+#    "Blade 25", "Blade 9", "Blade 0"          # keep Blade 0 last
+    
+    #Ordered by Outlet flow angle (largest to lowest)
     "Blade 6", "Blade 8", "Blade 18", "Blade 16", "Blade 17", "Blade 26",
     "Blade 19", "Blade 13", "Blade 22", "Blade 21", "Blade 15", "Blade 2",
     "Blade 4", "Blade 5", "Blade 14", "Blade 3", "Blade 20", "Blade 24",
     "Blade 25", "Blade 7", "Blade 23", "Blade 1", "Blade 12", "Blade 11",
     "Blade 10", "Blade 9", "Blade 0"          # keep Blade 0 last
+    
+    #Ordered by Turning angle (largest to lowest)
+#    "Blade 9", "Blade 10", "Blade 24", "Blade 25", "Blade 7", "Blade 20",
+#    "Blade 12", "Blade 11", "Blade 16", "Blade 17", "Blade 22", "Blade 21",
+#    "Blade 23", "Blade 3", "Blade 26", "Blade 1", "Blade 15", "Blade 2",
+#    "Blade 4", "Blade 5", "Blade 14", "Blade 18", "Blade 19", "Blade 6",
+#    "Blade 8", "Blade 13", "Blade 0"          # keep Blade 0 last
+
+    #Ordered by Pitch-to-chord ratio (largest to lowest)
+#    "Blade 6", "Blade 8", "Blade 13", "Blade 16", "Blade 22", "Blade 15",
+#    "Blade 26", "Blade 24", "Blade 2", "Blade 18", "Blade 19", "Blade 4",
+#    "Blade 5", "Blade 14", "Blade 3", "Blade 12", "Blade 17", "Blade 25",
+#    "Blade 21", "Blade 9", "Blade 10", "Blade 1", "Blade 23", "Blade 20",
+#    "Blade 7", "Blade 11", "Blade 0"          # keep Blade 0 last
 ]
 
 # ────────── TK helpers ───────────────────────────────────────────────────────
