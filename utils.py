@@ -923,7 +923,7 @@ def SU2_total_pressure_loss(
     P0_in = P01
     plane_df['loss'] = (P0_in - p0) / P0_in
     # remap y/pitch into [-0.5, 0.5] range
-    plane_df['y_norm'] = ((plane_df['y_norm'] - 0.1) % 1.0) - 0.5
+    plane_df['y_norm'] = ((plane_df['y_norm'] + 0.1) % 1.0) - 0.5
     plane_df = plane_df.sort_values('y_norm').reset_index(drop=True)
 
     y = plane_df['loss'].values
@@ -1170,7 +1170,7 @@ def MISES_extract_plane_data(field_file, x_plane, pitch, atol=1e-4):
         return None
 
     df = pd.DataFrame({'y_norm': y_vals, 'p_norm': p_vals, 'M':m_vals})
-    df['y_norm'] = ((df['y_norm'] + 0.5) % 1.0) - 0.5
+    df['y_norm'] = ((df['y_norm'] + 0.3) % 1.0) - 0.5
     df = df.sort_values('y_norm').reset_index(drop=True)
     return df
 

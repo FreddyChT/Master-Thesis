@@ -263,12 +263,28 @@ def post_processing_datablade():
     else:
         mises_pitch, mises_loss = np.array([]), np.array([])
     
-    plt.scatter(su2_pitch, su2_loss, label='SU2', s=0.5)
+    fig, ax1 = plt.subplots()
+
+    ax1.scatter(su2_pitch, su2_loss, s=0.5, label="SU2", color="C0")
+    ax1.set_xlabel("y/pitch")
+    ax1.set_xlim(-0.6, 0.6)
+    ax1.set_ylabel(f"SU2 total pressure loss - {bladeName}", color="C0")
+    ax1.tick_params(axis="y", labelcolor="C0")
+
     if len(mises_pitch):
-        plt.scatter(mises_pitch, mises_loss, color='red', s=0.5, label='MISES')
-    plt.xlabel('y/pitch')
-    plt.xlim(-0.6, 0.6)
-    plt.ylabel(f'Total pressure loss - {bladeName}')
-    plt.legend()
-    plt.savefig(run_dir / f"loss_pitch_{string}_{bladeName}.svg", format='svg', bbox_inches='tight')
+        ax2 = ax1.twinx()
+        ax2.scatter(mises_pitch, mises_loss, color="red", s=0.5, label="MISES")
+        ax2.set_ylabel(f"MISES total pressure loss - {bladeName}", color="red")
+        ax2.tick_params(axis="y", labelcolor="red")
+        lines1, labels1 = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax2.legend(lines1 + lines2, labels1 + labels2)
+    else:
+        ax1.legend()
+
+    fig.savefig(
+        run_dir / f"loss_pitch_{string}_{bladeName}.svg",
+        format="svg",
+        bbox_inches="tight",
+    )
     plt.show()
