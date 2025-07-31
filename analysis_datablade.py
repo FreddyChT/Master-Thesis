@@ -10,22 +10,14 @@ Disclaimer: GPT-o3 & Codex were heavily used for the elaboration of this script
 
 import argparse
 import numpy as np
-import os
 from pathlib import Path
 from datetime import datetime
-import time
 import sys
 import utils
 import mesh_datablade
 import configSU2_datablade
 import post_processing_datablade
 
-# You will need the following files to run this analysis:
-# - Ises file
-# - Blade file
-# - Gridpar file
-# - Mach Distribution file
-# Others to be determined when checking other files
 
 # ---------------------- USER PARAMETERS ----------------------
 # Defaults can be overridden from the command line
@@ -36,13 +28,13 @@ def create_rerun_script(run_dir, bladeName, base_dir,
                         alpha1_deg, alpha2_deg, Re, R, gamma, mu, 
                         pitch, d_factor, stagger, axial_chord, chord, pitch2chord,
                         T01, T02, T2, P01, P1, M1, P2_P0a, M2, P2, c2, u2, rho2,
-                        dist_inlet, dist_outlet, TI,
+                        dist_inlet, dist_outlet, x_plane, TI,
                         sizeCellFluid, sizeCellAirfoil,
                         nCellAirfoil, nCellPerimeter, nBoundaryPoints,
                         first_layer_height, bl_growth, bl_thickness,
                         size_LE, dist_LE, size_TE, dist_TE,
                         VolWAkeIn, VolWAkeOut,
-                        WakeXMin, WakeXMax, WakeYMin, WakeYMax):
+                        WakeXMin, WakeXMax):
     """Write a runnable Python script inside *run_dir* to rerun or replot."""
     date_str = datetime.now().strftime('%d-%m-%Y, %H:%M:%S')
     script_path = Path(run_dir) / "rerun.py"
@@ -75,7 +67,7 @@ run_dir = Path(__file__).resolve().parent
 base_dir = Path(__file__).resolve().parents[4]
 blade_dir = base_dir / 'Blades' / bladeName
 isesFilePath = blade_dir / f'ises.{string}'
-bladeFilePath = blade_dir / f'{bladeName}.{string}'
+bladeFilePath = blade_dir / f'blade.{string}'
 outletFilePath = blade_dir / f'outlet.{string}'
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -116,6 +108,7 @@ TI = {TI}
 # ─────────────────────────────────────────────────────────────────────────────
 dist_inlet = {dist_inlet}
 dist_outlet = {dist_outlet}
+x_plane = {x_plane}
 sizeCellFluid = {sizeCellFluid}
 sizeCellAirfoil = {sizeCellAirfoil}
 nCellAirfoil = {nCellAirfoil}
@@ -132,8 +125,6 @@ VolWAkeIn = {VolWAkeIn}
 VolWAkeOut = {VolWAkeOut}
 WakeXMin = {WakeXMin}
 WakeXMax = {WakeXMax}
-WakeYMin = {WakeYMin}
-WakeYMax = {WakeYMax}
 
 for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
     mod.bladeName = bladeName
@@ -176,6 +167,7 @@ for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
     
     mod.dist_inlet = dist_inlet
     mod.dist_outlet = dist_outlet
+    mod.x_plane = x_plane
     mod.sizeCellFluid = sizeCellFluid
     mod.sizeCellAirfoil = sizeCellAirfoil
     mod.nCellAirfoil = nCellAirfoil
@@ -192,8 +184,6 @@ for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
     mod.VolWAkeOut = VolWAkeOut
     mod.WakeXMin = WakeXMin
     mod.WakeXMax = WakeXMax
-    mod.WakeYMin = WakeYMin
-    mod.WakeYMax = WakeYMax
 
 def rerun():
     #mesh_datablade.mesh_datablade()
@@ -223,9 +213,9 @@ def main():
     #   INITIALIZATION
     # ─────────────────────────────────────────────────────────────────────────────
     #sys.argv = ['analysis_datablade.py', '--blades',
-                #'Blade_1',  'Blade_2',  'Blade_3',  'Blade_4',  'Blade_5',  'Blade_6',  'Blade_7',  'Blade_8',  'Blade_9',  'Blade_10',
-                #'Blade_11', 'Blade_12', 'Blade_13', 'Blade_14', 'Blade_15', 'Blade_16', 'Blade_17', 'Blade_18', 'Blade_19', 'Blade_20',
-                #'Blade_21', 'Blade_22', 'Blade_23', 'Blade_24', 'Blade_25', 'Blade_26']
+    #            'Blade_1',  'Blade_2',  'Blade_3',  'Blade_4',  'Blade_5',  'Blade_6',  'Blade_7',  'Blade_8',  'Blade_9',  'Blade_10',
+    #            'Blade_11', 'Blade_12', 'Blade_13', 'Blade_14', 'Blade_15', 'Blade_16', 'Blade_17', 'Blade_18', 'Blade_19', 'Blade_20',
+    #            'Blade_21', 'Blade_22', 'Blade_23', 'Blade_24', 'Blade_25', 'Blade_26']
     
     # --- USER INPUTS 
     parser = argparse.ArgumentParser(description="Run blade analysis")
@@ -263,7 +253,6 @@ def main():
         # --- BLADE DATA EXTRACTION 
         alpha1, alpha2, Re, M2, P2_P0a = utils.extract_from_ises(isesFilePath)
         pitch = utils.extract_from_blade(bladeFilePath)
-        #M1, P21_ratio = utils.extract_from_outlet(outletFilePath)
     
         # ─────────────────────────────────────────────────────────────────────────────
         #   BLADE GEOMETRY 
@@ -286,7 +275,7 @@ def main():
         #   BOUNDARY CONDITIONS 
         # ───────────────────────────────────────────────────────────────────────────── 
         R = 287.058 #[J/kg K]
-        gamma = 1.4
+        gamma = 1.4 #[-]
         mu = 1.846e-5 #[kg/m s] # Obtained from table online @T=300
         T01 = 300 #[K]
         P1, P01 = utils.freestream_total_pressure(Re, M2, axial_chord, T01)
@@ -305,6 +294,8 @@ def main():
         #--- INLET & OUTLET
         dist_inlet = 1
         dist_outlet = 1.5
+        x_plane = 0.5
+        print(f"Probe plane location: {(x_plane + 1) * axial_chord}")
         
         # -- GEOMETRY EXTRACTION 
         out = utils.process_airfoil_file(bladeFilePath, n_points=1000, n_te=60, d_factor=d_factor)
@@ -314,23 +305,22 @@ def main():
         # --- GENERAL MESH PARAMETERS 
         sizeCellFluid = 0.04 * axial_chord
         sizeCellAirfoil = 0.02 * axial_chord
-        nCellAirfoil = 549
+        nCellAirfoil = 300
         nCellPerimeter = 183
         nBoundaryPoints = 50
         
         # --- AIRFOIL RESAMPLING AND TE CLOSING 
         n_points = 1000
-        n_te = 60
-        d_factor = d_factor
         
         # --- MESH BL PARAMETERS
-        #first_layer_height = 0.01 * sizeCellAirfoil
-        #bl_growth = 1.17
-        #bl_thickness = 0.03 * pitch
+        n_layers = 25
+        y_plus_target = 1
+        x_ref_yplus = 1/n_points
         
         bl = utils.compute_bl_parameters(u2, rho2, mu, axial_chord,
-                                         n_layers    = 25,           # keep in sync with gmsh Field[1].thickness
-                                         y_plus_target = 1.0)
+                                         n_layers,           # keep in sync with gmsh Field[1].thickness
+                                         y_plus_target,
+                                         x_ref_yplus)
         
         first_layer_height = bl['first_layer_height']
         bl_growth          = bl['bl_growth']
@@ -344,10 +334,8 @@ def main():
         VolWAkeIn   = 0.35 * sizeCellFluid
         VolWAkeOut  = sizeCellFluid
         WakeXMin    = 0.1 * axial_chord 
-        WakeXMax    = (dist_outlet + 1) * axial_chord
-        WakeYMin    = -5 * pitch
-        WakeYMax    =  5 * pitch
-
+        WakeXMax    = (dist_outlet + 0.5) * axial_chord
+        
         # expose variables to modules
         for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
             mod.bladeName = bladeName
@@ -390,6 +378,7 @@ def main():
             
             mod.dist_inlet = dist_inlet
             mod.dist_outlet = dist_outlet
+            mod.x_plane = x_plane
             mod.sizeCellFluid = sizeCellFluid
             mod.sizeCellAirfoil = sizeCellAirfoil
             mod.nCellAirfoil = nCellAirfoil
@@ -406,33 +395,27 @@ def main():
             mod.VolWAkeOut = VolWAkeOut
             mod.WakeXMin = WakeXMin
             mod.WakeXMax = WakeXMax
-            mod.WakeYMin = WakeYMin
-            mod.WakeYMax = WakeYMax
             
         create_rerun_script(run_dir, bladeName, base_dir,
                             no_cores, string, fileExtension,
                             alpha1_deg, alpha2_deg, Re, R, gamma, mu, 
                             pitch, d_factor, stagger, axial_chord, chord, pitch2chord,
                             T01, T02, T2, P01, P1, M1, P2_P0a, M2, P2, c2, u2, rho2,
-                            dist_inlet, dist_outlet, TI,
+                            dist_inlet, dist_outlet, x_plane, TI,
                             sizeCellFluid, sizeCellAirfoil,
                             nCellAirfoil, nCellPerimeter, nBoundaryPoints,
                             first_layer_height, bl_growth, bl_thickness,
                             size_LE, dist_LE, size_TE, dist_TE,
                             VolWAkeIn, VolWAkeOut,
-                            WakeXMin, WakeXMax, WakeYMin, WakeYMax)
+                            WakeXMin, WakeXMax)
         
         mesh_datablade.mesh_datablade()
-        '''
         configSU2_datablade.configSU2_datablade()
         proc, logf = configSU2_datablade.runSU2_datablade(background=True)
-        if utils.ask_view_live(bladeName):
-            time.sleep(5)
-            utils.launch_paraview_live(run_dir, bladeName, string)
         proc.wait()
         logf.close()
         configSU2_datablade._summarize_su2_log(run_dir / "su2.log")
-        post_processing_datablade.post_processing_datablade()'''
+        post_processing_datablade.post_processing_datablade()
 
 if __name__ == '__main__':
     main()

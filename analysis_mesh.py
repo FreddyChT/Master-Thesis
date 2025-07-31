@@ -27,6 +27,8 @@ import argparse
 import math
 from pathlib import Path
 from datetime import datetime
+import time
+import re
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -76,6 +78,97 @@ def _compute_gci(values, elems):
     return dict(p=p, gci_fine=gci_fine, gci_med=gci_med)
 
 
+_TABLE_LINE = re.compile(r"\|\s*(.*?)\s*\|\s*([\d.eE+-]+)\s*\|\s*([\d.eE+-]+)\s*\|")
+
+
+def _parse_mesh_quality(log_file: Path) -> dict[str, float]:
+    """Extract mesh quality statistics from a SU2 log file."""
+    metrics: dict[str, float] = {}
+    lines = log_file.read_text().splitlines()
+    in_table = False
+    for line in lines:
+        if "Mesh Quality Metric" in line:
+            in_table = True
+            continue
+        if in_table:
+            if line.strip().startswith("+"):
+                continue
+            if not line.strip() or not line.startswith("|"):
+                break
+            m = _TABLE_LINE.search(line)
+            if not m:
+                continue
+            name, vmin, vmax = m.groups()
+            try:
+                lo = float(vmin)
+                hi = float(vmax)
+            except ValueError:
+                continue
+            name = name.lower()
+            if "orthogonality" in name:
+                metrics["orthogonality_min"] = lo
+                metrics["orthogonality_max"] = hi
+            elif "aspect ratio" in name:
+                metrics["aspect_ratio_min"] = lo
+                metrics["aspect_ratio_max"] = hi
+            elif "sub-volume" in name:
+                metrics["subvol_ratio_min"] = lo
+                metrics["subvol_ratio_max"] = hi
+    return metrics
+
+
+def _gmsh_quality(mesh_file: Path) -> dict[str, float]:
+    """Return additional quality metrics using gmsh if available."""
+    quality: dict[str, float] = {}
+    try:
+        import gmsh  # type: ignore
+    except Exception:
+        return quality
+    try:
+        gmsh.initialize()
+        gmsh.open(str(mesh_file))
+        try:
+            gmsh.option.setNumber("Mesh.QualityType", 5)  # aspect ratio
+            _, vals = gmsh.model.mesh.getQuality()
+            if vals:
+                quality["aspect_ratio_min"] = min(vals)
+                quality["aspect_ratio_max"] = max(vals)
+        except Exception:
+            pass
+        try:
+            gmsh.option.setNumber("Mesh.QualityType", 7)  # skewness
+            _, vals = gmsh.model.mesh.getQuality()
+            if vals:
+                quality["skewness_min"] = min(vals)
+                quality["skewness_max"] = max(vals)
+        except Exception:
+            pass
+        try:
+            gmsh.option.setNumber("Mesh.QualityType", 2)  # jacobian ratio
+            _, vals = gmsh.model.mesh.getQuality()
+            if vals:
+                quality["jacobian_ratio_min"] = min(vals)
+                quality["jacobian_ratio_max"] = max(vals)
+        except Exception:
+            pass
+        gmsh.finalize()
+    except Exception:
+        try:
+            gmsh.finalize()
+        except Exception:
+            pass
+    return quality
+
+
+def _run_diverged(summary_file: Path) -> bool:
+    """Return ``True`` if the SU2 run reported divergence."""
+    try:
+        text = summary_file.read_text().lower()
+    except OSError:
+        return False
+    return "diverged" in text
+
+
 def _update_mesh_params(scale: float, axial_chord: float) -> None:
     """Scale global mesh parameters for modules by ``scale``."""
     mesh_datablade.sizeCellFluid = 0.04 * axial_chord / scale
@@ -91,7 +184,7 @@ def _update_mesh_params(scale: float, axial_chord: float) -> None:
     configSU2_datablade.nBoundaryPoints = mesh_datablade.nBoundaryPoints
 
 
-def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float]:
+def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float, dict[str, float]]:
     """Run a single simulation for ``blade`` with mesh scaled by ``scale``.
 
     Returns
@@ -102,6 +195,8 @@ def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float]
         Final lift coefficient.
     cd : float
         Final drag coefficient.
+    metrics : dict
+        Dictionary with meshing time and quality statistics.
     """
     blade_dir = BLADEROOT / 'Blades' / blade
     ises = blade_dir / 'ises.databladeVALIDATION'
@@ -202,7 +297,9 @@ def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float]
 
     _update_mesh_params(scale, axial_chord)
 
+    start_t = time.perf_counter()
     mesh_datablade.mesh_datablade()
+    mesh_time = time.perf_counter() - start_t
     configSU2_datablade.configSU2_datablade()
     configSU2_datablade.runSU2_datablade()
     post_processing_datablade.post_processing_datablade()
@@ -219,12 +316,21 @@ def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float]
     hist = pd.read_csv(hist_file)
     cd = hist['   "CD(blade1)"   '].iat[-1]
     cl = hist['   "CL(blade1)"   '].iat[-1]
-    return nelem, cl, cd
+
+    log_file = run_dir / "su2.log"
+    metrics = _parse_mesh_quality(log_file)
+    metrics.setdefault("mesh_time", mesh_time)
+    mesh_msh = run_dir / f"cascade2D_databladeVALIDATION_{blade}.msh"
+    metrics.update({k: v for k, v in _gmsh_quality(mesh_msh).items() if v is not None})
+    summary_file = run_dir / "run_summary.txt"
+    metrics["diverged"] = _run_diverged(summary_file)
+
+    return nelem, cl, cd, metrics
 
 
 def main():
     parser = argparse.ArgumentParser(description='Run mesh convergence study')
-    parser.add_argument('--blade', default='Blade_1', help='Blade name')
+    parser.add_argument('--blade', default='Blade_17', help='Blade name')
     args = parser.parse_args()
 
     blade = args.blade
@@ -241,13 +347,29 @@ def main():
         scale = math.sqrt(target / baseline)
         run_dir = study_dir / f"run_{int(target/1000)}k"
         run_dir.mkdir()
-        nelem, cl, cd = run_one(blade, run_dir, scale)
-        results.append(dict(n=nelem, cl=cl, cd=cd))
-        print(f"Mesh {nelem} elements -> CL={cl:.5f}, CD={cd:.5f}")
+        nelem, cl, cd, mstat = run_one(blade, run_dir, scale)
+        entry = dict(n=nelem, cl=cl, cd=cd)
+        entry.update(mstat)
+        results.append(entry)
+        print(
+            f"Mesh {nelem} elements -> CL={cl:.5f}, CD={cd:.5f}, "
+            f"mesh time={mstat.get('mesh_time', 0):.2f}s"
+        )
 
     elems = [r['n'] for r in results]
     Cls = [r['cl'] for r in results]
     Cds = [r['cd'] for r in results]
+    mesh_times = [r.get('mesh_time') for r in results]
+    ar_min = [r.get('aspect_ratio_min') for r in results]
+    ar_max = [r.get('aspect_ratio_max') for r in results]
+    orth_min = [r.get('orthogonality_min') for r in results]
+    orth_max = [r.get('orthogonality_max') for r in results]
+    skew_min = [r.get('skewness_min') for r in results]
+    skew_max = [r.get('skewness_max') for r in results]
+    jac_min = [r.get('jacobian_ratio_min') for r in results]
+    jac_max = [r.get('jacobian_ratio_max') for r in results]
+    subvol_max = [r.get('subvol_ratio_max') for r in results]
+    diverged = [r.get('diverged') for r in results]
 
     # GCI based on last three meshes (40k, 80k, 120k approx)
     gci_cl = _compute_gci(Cls[3:6], elems[3:6]) #_compute_gci(cls[3:6], elems[3:6])
@@ -256,15 +378,58 @@ def main():
     print('\nGCI results (CL):', gci_cl)
     print('GCI results (CD):', gci_cd)
 
-    plt.figure(figsize=(6, 4))
-    plt.plot(elems, Cls, 'o-', label='$C_l$')
-    plt.plot(elems, Cds, 's-', label='$C_d$')
-    plt.xlabel('Number of Elements')
-    plt.ylabel('Coefficient')
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(study_dir / 'mesh_convergence.svg', format='svg')
+    fig, ax1 = plt.subplots(figsize=(6, 4))
+    ax1.plot(elems, Cls, 'o-', label='$C_l$', color='tab:blue')
+    if any(diverged):
+        ax1.plot([e for e, d in zip(elems, diverged) if d],
+                 [c for c, d in zip(Cls, diverged) if d],
+                 'x', color='red', label='diverged')
+    ax1.set_xlabel('Number of Elements')
+    ax1.set_ylabel('$C_l$', color='tab:blue')
+    ax1.tick_params(axis='y', labelcolor='tab:blue')
+
+    ax2 = ax1.twinx()
+    ax2.plot(elems, Cds, 's-', label='$C_d$', color='tab:orange')
+    if any(diverged):
+        ax2.plot([e for e, d in zip(elems, diverged) if d],
+                 [c for c, d in zip(Cds, diverged) if d],
+                 'x', color='red')
+    ax2.set_ylabel('$C_d$', color='tab:orange')
+    ax2.tick_params(axis='y', labelcolor='tab:orange')
+
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='best')
+
+    ax1.grid(True, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(study_dir / 'mesh_convergence.svg', format='svg')
+
+    def _plot(values, ylabel, filename):
+        if all(v is None for v in values):
+            return
+        plt.figure(figsize=(6, 4))
+        plt.plot(elems, values, 'o-')
+        if any(diverged):
+            plt.plot([e for e, d in zip(elems, diverged) if d],
+                     [v for v, d in zip(values, diverged) if d],
+                     'x', color='red')
+        plt.xlabel('Number of Elements')
+        plt.ylabel(ylabel)
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(study_dir / filename, format='svg')
+
+    _plot(mesh_times, 'Meshing time [s]', 'mesh_time.svg')
+    _plot(ar_max, 'Aspect ratio (max)', 'aspect_ratio_max.svg')
+    #_plot(ar_min, 'Aspect ratio (min)', 'aspect_ratio_min.svg')
+    #_plot(orth_max, 'Orthogonality (max)', 'orthogonality_max.svg')
+    _plot(orth_min, 'Orthogonality (min)', 'orthogonality_min.svg')
+    _plot(skew_max, 'Skewness (max)', 'skewness_max.svg')
+    #_plot(skew_min, 'Skewness (min)', 'skewness_min.svg')
+    _plot(jac_max, 'Jacobian ratio (max)', 'jacobian_ratio_max.svg')
+    _plot(jac_min, 'Jacobian ratio (min)', 'jacobian_ratio_min.svg')
+    _plot(subvol_max, 'Sub-volume ratio (max)', 'subvol_ratio_max.svg')
 
 
 if __name__ == '__main__':

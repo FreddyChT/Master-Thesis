@@ -134,7 +134,7 @@ def post_processing_datablade():
     vol_df   = pd.read_csv(vol_file, sep=',')
     
     # --- Boundary-layer integrals on the whole blade ------------------------
-    bl_all = bl_distributions(df, vol_df)
+    bl_all = bl_distributions(df, vol_df, y_max = bl_thickness/3, n_samples = 25)
     
     # split into SS / PS by the same masks returned by SU2_organize -----------
     mask_ss = df.index.isin(dataSS.index)
@@ -146,7 +146,6 @@ def post_processing_datablade():
     H_SS        = bl_all['H'][mask_ss]
     H_PS        = bl_all['H'][mask_ps]
 
-    
     
     # ─────────────────────────────────────────────────────────────────────────────
     #   MISES DATA
@@ -203,7 +202,10 @@ def post_processing_datablade():
         
     
     # field file data extraction
-    
+    if file_nonempty(mises_fieldFile):
+        all_x, all_y, _, all_p, all_u, all_v, _, all_m = MISES_fieldDataGather(mises_fieldFile)
+    else:
+        all_x, all_y, all_p, all_u, all_v, all_m = [], [], [], [], [], []
     
     # ─────────────────────────────────────────────────────────────────────────────
     #   RMS VERIFICATION
@@ -229,6 +231,7 @@ def post_processing_datablade():
         except OSError:
             print(f"[WARNING] Could not append RMS to {summary_file}")
     
+    
     # ─────────────────────────────────────────────────────────────────────────────
     #   PLOTTING
     # ─────────────────────────────────────────────────────────────────────────────
@@ -243,11 +246,45 @@ def post_processing_datablade():
     SU2_DataPlotting(s_normSS, s_normPS, friction_coeffSS, friction_coeffPS,
                  "Skin Friction Coefficient", string, run_dir, bladeName, mirror_PS=True,
                  exp_s=blade_frac_bl, exp_data=cf_bl)
+    
+    
+    p_plane = (x_plane + 1) * axial_chord
+    
+    su2_res = SU2_total_pressure_loss(
+        vol_df, p_plane, pitch, P01, alpha2,
+        atol=sizeCellFluid/2, smooth=True, window_length=15, polyorder=4)  # order: n_points 10^2 - s 10^-3
+    su2_pitch, su2_loss = su2_res['y_norm'], su2_res['loss']
+    
+    mises_res = MISES_total_pressure_loss(
+        mises_fieldFile, p_plane, pitch, P01,
+        atol=0.025, smooth=True, window_length=15, polyorder=4)
+    if mises_res is not None:
+        mises_pitch, mises_loss = mises_res['y_norm'], mises_res['loss']
+    else:
+        mises_pitch, mises_loss = np.array([]), np.array([])
+    
+    fig, ax1 = plt.subplots()
 
-    SU2_DataPlotting(s_normSS, s_normPS, Re_theta_SS, Re_theta_PS,
-                 "Re_theta", string, run_dir, bladeName, mirror_PS=True,
-                 exp_s=blade_frac_bl, exp_data=Re_t_bl)
+    ax1.scatter(su2_pitch, su2_loss, s=0.5, label="SU2", color="C0")
+    ax1.set_xlabel("y/pitch")
+    ax1.set_xlim(-0.6, 0.6)
+    ax1.set_ylabel(f"SU2 total pressure loss - {bladeName}", color="C0")
+    ax1.tick_params(axis="y", labelcolor="C0")
 
-    SU2_DataPlotting(s_normSS, s_normPS, H_SS, H_PS, 
-                 "Shape Factor", string, run_dir, bladeName, mirror_PS=True,
-                 exp_s=blade_frac_bl, exp_data=H_bl)
+    if len(mises_pitch):
+        ax2 = ax1.twinx()
+        ax2.scatter(mises_pitch, mises_loss, color="red", s=0.5, label="MISES")
+        ax2.set_ylabel(f"MISES total pressure loss - {bladeName}", color="red")
+        ax2.tick_params(axis="y", labelcolor="red")
+        lines1, labels1 = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax2.legend(lines1 + lines2, labels1 + labels2)
+    else:
+        ax1.legend()
+
+    fig.savefig(
+        run_dir / f"loss_pitch_{string}_{bladeName}.svg",
+        format="svg",
+        bbox_inches="tight",
+    )
+    plt.show()

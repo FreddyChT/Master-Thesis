@@ -1,22 +1,16 @@
 import numpy as np
-import math
-import shutil
 import pandas as pd
+import shutil
 import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline
 from scipy.signal import savgol_filter
+from scipy.spatial import cKDTree
 from pathlib import Path
-import subprocess
 from OCC.Core.TColgp import TColgp_Array1OfPnt
 from OCC.Core.TColStd import TColStd_Array1OfReal, TColStd_Array1OfInteger
 from OCC.Core.Geom import Geom_BSplineCurve
 from OCC.Core.gp import gp_Pnt
 from math import log10, sqrt
-import os
-import tkinter as tk
-from tkinter import messagebox
-import time
-
 
 
 plt.rcParams.update({
@@ -95,31 +89,6 @@ def extract_from_blade(file_path):
         
     return pitch
 
-def extract_from_outlet(file_path):
-    #Opens the given file, skips header lines, and extracts the first numerical value from the next line.
-    with open(file_path, 'r') as f:
-        # Skip the first line to extract Pitch value
-        for _ in range(19):
-            next(f)
-        # Read the next line and split into tokens
-        line = f.readline()
-        tokens = line.split()
-        # Extract the third token (index 2) and convert it to a float
-        M1_ref = np.float64(tokens[2])
-        
-        for _ in range(3):
-            next(f)
-        # Read the next line and split into tokens
-        line = f.readline()
-        tokens = line.split()
-        # Extract the third token (index 2) and convert it to a float
-        P21_ratio = np.float64(tokens[2])
-        
-        print("Inlet Mach number:", M1_ref)
-        print("P2/P1:", P21_ratio)
-        
-    return M1_ref, P21_ratio
-
 def read_selig_airfoil(path):
     x, y = [], []
     with open(path, 'r') as f:
@@ -130,13 +99,6 @@ def read_selig_airfoil(path):
             x.append(float(toks[0])); y.append(float(toks[1]))
     return np.array(x), np.array(y)
 
-#Data Blade Validation file creation
-def copy_blade_file(original_filename, blade_dir):
-    original_filepath = blade_dir / original_filename
-    new_filename = original_filename + ".databladeValidation"     # Construct the new file name
-    new_filepath = blade_dir / new_filename
-    shutil.copyfile(original_filepath, new_filepath) # Copy the file
-    #print(f"Copied '{original_filename}' to '{new_filename}'.")
 
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -553,7 +515,6 @@ def compute_bl_parameters(U_inf: float,
                           rho: float,
                           mu: float,
                           chord_axial: float,
-                          *,
                           n_layers: int       = 25,
                           y_plus_target: float = 1.0,
                           x_ref_yplus: float   = 0.02,
@@ -594,86 +555,93 @@ def compute_bl_parameters(U_inf: float,
 # ────────────────────────────────────────────────────────────────────────
 
 def _normal_at_surface_point(x_surf, y_surf, x_prev, y_prev, x_next, y_next):
-    """Unit normal pointing outside the blade (2-D)."""
-    # tangent = next − prev   (already LE→TE ordering)
+    """
+    Outward unit normal for a CW-ordered blade contour.
+    tangent  t  = p_next − p_prev
+    normal   n₀ = (+t_y, −t_x)  (90° CW rotation)
+    """
     tx, ty = x_next - x_prev, y_next - y_prev
-    # outward = (+ty, −tx) for a left-hand (anti-clockwise) contour
-    nx, ny =  ty, -tx
-    mag = np.hypot(nx, ny)
-    return nx/mag, ny/mag
-
+    nx0, ny0 =  ty, tx                      # ⟂ to t -> CCW is ty, -tx
+    mag = np.hypot(nx0, ny0)
+    if mag == 0.0:                           # duplicate or kinked nodes
+        return 0.0, 0.0
+    return nx0/mag, ny0/mag
 
 def _bl_integrals(y, rho, u):
-    """Return θ, δ*, H given wall-normal profiles (already non-dim)."""
-    # ρ_e, U_e at last entry
-    rho_e, ue = rho[-1], u[-1]
-    f1 = (rho/rho_e)*(u/ue)
-    theta      = np.trapz(f1*(1 - u/ue), y)
-    delta_star = np.trapz((rho/rho_e)*(1 - u/ue), y)
-    H          = delta_star/theta if theta > 0 else np.nan
-    return theta, delta_star, H
-
-
-def bl_distributions(surface_df: "pd.DataFrame",
-                     volume_df:  "pd.DataFrame",
-                     y_max: float = 0.01,
-                     n_samples: int = 50):
     """
-    Loop over every surface node and integrate θ,  δ*,  Re_θ,  H.
+    θ  = ∫ (ρ/ρ_e)(u/U_e)(1 − u/U_e) dy
+    δ* = ∫ (ρ/ρ_e)(1 − u/U_e) dy
+    H  = δ*/θ
+    """
+    # edge quantities – average last 3 pts for noise immunity
+    #rho_e = np.mean(rho[-3:])
+    ue    = np.mean(u  [-3:])
+    g = 1 #(rho/rho_e)
+    f = (u/ue) #g*(u/ue)
+    theta      = np.trapz(f*(1.0 - u/ue), y)          # momentum thickness
+    delta_star = np.trapz(g*(1.0 - u/ue), y)
+    return theta, delta_star, delta_star/theta if theta > 0 else np.nan
+
+def bl_distributions(surface_df,
+                     volume_df,
+                     y_max      = 0.01,
+                     n_samples  = 25,
+                     trim_ue    = 0.99):
+    """
+    Integrate θ, δ*, Re_θ, H at every surface node.
+
+    Parameters
+    ----------
+    surface_df : DataFrame with 'x','y','s_norm'
+    volume_df  : restart_flow CSV (SU2) – needs Density, Momentum_x/y, Laminar_Viscosity
+    y_max      : normal-ray length [m]
+    n_samples  : points per ray
+    trim_ue    : cut when u/ue ≥ trim_ue  (default 0.99 ≈ δ₉₉)
 
     Returns
     -------
-    dict with arrays keyed by 's', 'Re_theta', 'H', split into SS/PS later.
+    dict(s, Re_theta, H)   with NumPy arrays.
     """
-    from scipy.spatial import cKDTree
+    # --- build KD-tree for nearest-cell interrogation ------------------------
+    xy_v  = volume_df[['x', 'y']].values
+    rho_v = volume_df['Density'          ].values
+    mu_v  = volume_df['Laminar_Viscosity'].values
+    momx  = volume_df['Momentum_x'].values
+    momy  = volume_df['Momentum_y'].values
+    u_v   = np.sqrt(momx**2 + momy**2) / rho_v        # |u| from ρu components
+    tree  = cKDTree(xy_v)
 
-    # --- 1) accelerator for nearest-neighbour interpolation ------------------
-    vol_xy   = volume_df[['x', 'y']].values
-    vol_u    = (volume_df['Momentum_x']**2 +
-                volume_df['Momentum_y']**2).pow(0.5).values / volume_df['Density'].values
-    vol_rho  = volume_df['Density'].values
-    vol_mu   = volume_df['Laminar_Viscosity'].values
-    tree = cKDTree(vol_xy)
-
-    # --- 2) prepare outputs --------------------------------------------------
-    theta_arr, Re_theta_arr, H_arr = [], [], []
+    # --- iterate over surface nodes -----------------------------------------
     s_coord = surface_df['s_norm'].values
+    xs, ys  = surface_df['x'].values, surface_df['y'].values
+    n_pts   = len(xs)
 
-    xs, ys = surface_df['x'].values, surface_df['y'].values
-    for i, (xs_i, ys_i) in enumerate(zip(xs, ys)):
-        # tangent neighbours (cyclic indexing)
-        ip = (i+1) % len(xs); im = (i-1) % len(xs)
-        nx, ny = _normal_at_surface_point(xs_i, ys_i,
-                                          xs[im], ys[im], xs[ip], ys[ip])
+    theta_l, Reθ_l, H_l = [], [], []
 
-        # sample points along the normal
-        y_local = np.linspace(0.0, y_max, n_samples)
-        x_samp  = xs_i + nx * y_local
-        y_samp  = ys_i + ny * y_local
-        _, idxs = tree.query(np.column_stack([x_samp, y_samp]), k=1)
+    for i in range(n_pts):
+        im, ip = (i-1)%n_pts, (i+1)%n_pts
+        nx, ny = _normal_at_surface_point(xs[i], ys[i], xs[im], ys[im], xs[ip], ys[ip])
 
-        u_prof   = vol_u[idxs]
-        rho_prof = vol_rho[idxs]
-        mu_prof  = vol_mu[idxs]
+        y_loc  = np.linspace(0.0, y_max, n_samples)
+        pts_xy = np.column_stack((xs[i] + nx*y_loc,
+                                  ys[i] + ny*y_loc))
+        _, idx = tree.query(pts_xy, k=1)
 
-        # trim at u / u_e >= 0.99
-        mask = u_prof / u_prof[-1] < 0.99
-        if mask.any():
-            cut = np.where(~mask)[0][0] + 1  # include first ≥0.99 point
-            y_loc = y_local[:cut];  u_p = u_prof[:cut];  rho_p = rho_prof[:cut]
-            mu_e  = mu_prof[cut-1];  # last available μ
-        else:
-            y_loc, u_p, rho_p = y_local, u_prof, rho_prof
-            mu_e = mu_prof[-1]
+        u_prof, rho_prof, mu_prof = u_v[idx], rho_v[idx], mu_v[idx]
 
-        θ, δs, H = _bl_integrals(y_loc, rho_p, u_p)
-        Re_theta = rho_p[-1]*u_p[-1]*θ / mu_e
+        # isolate boundary-layer part (u/ue < trim_ue)
+        j_cut = np.argmax(u_prof/u_prof[-1] >= trim_ue) + 1
+        y_bl, u_bl, rho_bl = y_loc[:j_cut], u_prof[:j_cut], rho_prof[:j_cut]
+        mu_e = mu_prof[j_cut-1]
 
-        theta_arr.append(θ); Re_theta_arr.append(Re_theta); H_arr.append(H)
+        θ, δ, H = _bl_integrals(y_bl, rho_bl, u_bl)
+        Reθ = rho_bl[-1]*u_bl[-1]*θ / mu_e
+
+        theta_l.append(θ); Reθ_l.append(Reθ); H_l.append(H)
 
     return dict(s=s_coord,
-                Re_theta=np.array(Re_theta_arr),
-                H=np.array(H_arr))
+                Re_theta=np.asarray(Reθ_l),
+                H       =np.asarray(H_l))
 
 
 
@@ -742,6 +710,9 @@ def compute_Spec_Dissipation(k, ILS):
     omega = C_mu**(3/4) * k**(1/2)/ILS
     return omega
 
+def compute_total_pressure(P, M, gamma):
+    return P * (1 + 0.5*(gamma-1)*M**2)**(gamma/(gamma-1))
+
 def freestream_total_pressure(Re, M, L, T,
                               mu=1.8464e-5,   # dynamic viscosity of air at ~300 K [kg m-1 s-1]
                               gamma=1.4,      # ratio of specific heats for air
@@ -757,27 +728,47 @@ def freestream_total_pressure(Re, M, L, T,
     return p_static, p_total
 
 
-# --- example with your numbers ---------------------------------------------
-Re = 6.0e5      # Reynolds number
-M  = 0.5        # Mach number
-L  = 0.20       # chord length [m] – change to your model’s chord
-T  = 288.0      # static temp [K] – change to test temperature
-
-p_static, p_total = freestream_total_pressure(Re, M, L, T)
-
-print(f"Static pressure : {p_static/1000:.2f} kPa")
-print(f"Total pressure  : {p_total/1000:.2f} kPa")
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 #   SU2 Post-Processing
 # ─────────────────────────────────────────────────────────────────────────────
-def roll_array(arr, shift):
+def start_end_half(y_norm, values, center_on_max=False):
+    """Return arrays starting at ``-0.5`` and ending at ``0.5``.
+
+    Parameters
+    ----------
+    center_on_max : bool, optional
+        If ``True`` the distribution is shifted so that the maximum ``values``
+        occurs at ``y=0`` before wrapping to ``[-0.5, 0.5]``.
+
+    The first point is shifted to ``-0.5`` and appended again at ``+0.5`` to
+    ensure a closed distribution for periodic plots.
     """
-    Rolls the arrays so that idx_maxP is placed at index 0.
-    Ensures the suction side starts at the max‐pressure location for easy plotting.
-    """
-    return np.concatenate([arr[shift:], arr[:shift]])
+
+    y_arr = np.asarray(y_norm, dtype=float)
+    v_arr = np.asarray(values, dtype=float)
+
+    if y_arr.size == 0:
+        return y_arr, v_arr
+
+    # sort arrays for consistent wrapping
+    order = np.argsort(y_arr)
+    y_sorted = y_arr[order]
+    v_sorted = v_arr[order]
+
+    if center_on_max:
+        shift = y_sorted[np.argmax(v_sorted)]
+    else:
+        shift = y_sorted[0] + 0.5
+
+    y_shift = ((y_sorted - shift + 0.5) % 1.0) - 0.5
+
+    y_out = np.append(y_shift, y_shift[0] + 1.0)
+    v_out = np.append(v_sorted, v_sorted[0])
+
+    return y_out, v_out
+
+
 
 def SU2_organize(df):
     """
@@ -820,11 +811,67 @@ def SU2_extract_plane_data(df, x_plane, pitch, alpha_m, atol=1e-4):
     # Extract and organize the data
     sub_df = df.loc[mask, columns + ['x']].copy()
     sub_df['y_norm'] = sub_df['y'] / pitch  # Normalize y
-    sub_df['flow_angle'] = np.atan2(sub_df['Velocity_y'], sub_df['Velocity_x']) * 180 / np.pi - alpha_m
+    sub_df['flow_angle'] = np.arctan2(sub_df['Velocity_y'], sub_df['Velocity_x']) * 180 / np.pi - alpha_m
     
     # Sort by normalized y for clean plots
     sub_df = sub_df.sort_values('y_norm').reset_index(drop=True)
     return sub_df    
+
+
+def SU2_total_pressure_loss(
+        df,
+        x_plane,
+        pitch,
+        P01,
+        alpha_m=0.0,
+        atol=1e-4,
+        smooth=False,
+        window_length=15,
+        polyorder=3,
+):
+    """Return total pressure loss distribution at a given ``x_plane``.
+
+    The loss coefficient is ``(P01 - P) / P01`` where ``P`` is the static
+    pressure extracted from the ``restart`` solution on the chosen plane.
+
+    ``y`` coordinates are mapped to ``[-0.5, 0.5]`` to account for periodicity.
+
+    Parameters
+    ----------
+    smooth : bool, optional
+        If ``True`` the loss distribution is smoothed before returning.
+    window_length : int, optional
+        Window length for the Savitzky–Golay filter when ``smooth`` is ``True``.
+    polyorder : int, optional
+        Polynomial order for the Savitzky–Golay filter.
+    """
+    plane_df = SU2_extract_plane_data(df, x_plane, pitch, alpha_m, atol)
+    if plane_df is None:
+        return None
+
+    p0 = compute_total_pressure(plane_df['Pressure'].values,
+                                plane_df['Mach'].values, gamma=1.4)
+    P0_in = P01
+    plane_df['loss'] = (P0_in - p0) / P0_in
+
+    y = plane_df['loss'].values
+    if smooth:
+        wl = window_length if window_length % 2 == 1 else window_length + 1
+        max_wl = len(y) if len(y) % 2 == 1 else len(y) - 1
+        if wl > max_wl:
+            wl = max_wl
+        if wl < polyorder + 2:
+            wl = polyorder + 2
+            if wl % 2 == 0:
+                wl += 1
+            if wl > max_wl:
+                wl = max_wl
+        plane_df['loss'] = savgol_filter(y, wl, polyorder)
+
+    y_out, v_out = start_end_half(plane_df['y_norm'].values,
+                                   plane_df['loss'].values,
+                                   center_on_max=True)
+    return pd.DataFrame({'y_norm': y_out, 'loss': v_out})
 
 def SU2_DataPlotting(
         sSSnorm,    # suction side arc fraction
@@ -837,7 +884,8 @@ def SU2_DataPlotting(
         bladeName,
         mirror_PS=False,
         exp_s=None, # optional experimental x array
-        exp_data=None # optional experimental Mach array
+        exp_data=None, # optional experimental Mach array
+        case_label=None, # optional test case string
     ):
     """
     Plots SU2 results in Non-Norm style (direct values) plus
@@ -861,8 +909,12 @@ def SU2_DataPlotting(
     else:
         plt.xlim(0, 1)
     plt.legend(loc='upper left', edgecolor='k', fancybox=False)
+    if case_label:
+        plt.title(case_label)
     plt.savefig(run_dir / f"non-normalized_{quantity}_{string}_{bladeName}.svg", format='svg', bbox_inches='tight')
     plt.show()
+
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1003,6 +1055,114 @@ def MISES_fieldDataGather(file_path):
 
     return all_x, all_y, all_rho, all_p, all_u, all_v, all_q, all_m
 
+
+def MISES_extract_plane_data(field_file, x_plane, pitch, atol=1e-4):
+    """Extract data at a given ``x_plane`` from a MISES ``field`` file.
+
+    Parameters
+    ----------
+    field_file : str or Path
+        Path to the ``field`` file produced by MISES.
+    x_plane : float
+        Axial location for the extraction.
+    pitch : float
+        Blade pitch used to normalise the ``y`` coordinate.
+    atol : float, optional
+        Absolute tolerance applied when matching ``x_plane``.
+    """
+    all_x, all_y, _, all_p, all_m, *_ = MISES_fieldDataGather(field_file)
+
+    y_vals = []
+    p_vals = []
+    m_vals = []
+
+    for x_arr, y_arr, p_arr, m_arr in zip(all_x, all_y, all_p, all_m):
+        if not x_arr:
+            continue
+
+        x_arr = np.asarray(x_arr)
+        y_arr = np.asarray(y_arr)
+        p_arr = np.asarray(p_arr)
+        m_arr = np.asarray(m_arr)
+
+        mask = np.isclose(x_arr, x_plane, atol=atol)
+        if mask.any():
+            y_vals.extend(y_arr[mask] / pitch)
+            p_vals.extend(p_arr[mask])
+            m_vals.extend(m_arr[mask])
+            continue
+
+        if x_plane >= x_arr.min() and x_plane <= x_arr.max():
+            y_val = np.interp(x_plane, x_arr, y_arr)
+            p_val = np.interp(x_plane, x_arr, p_arr)
+            m_val = np.interp(x_plane, x_arr, m_arr)
+            y_vals.append(y_val / pitch)
+            p_vals.append(p_val)
+            m_vals.append(m_val)
+
+    if not p_vals:
+        print(f"[WARNING] No data found at x = {x_plane} (tol={atol}). Try increasing tolerance.")
+        return None
+
+    df = pd.DataFrame({'y_norm': y_vals, 'p_norm': p_vals, 'M': m_vals})
+    df['y_norm'] = np.asarray(df['y_norm']) % 1.0
+    return df
+
+
+def MISES_total_pressure_loss(
+        field_file,
+        x_plane,
+        pitch,
+        P01,
+        smooth=False,
+        window_length=15,
+        polyorder=3,
+        atol=1e-4,
+):
+    """Return total pressure loss from a MISES ``field`` file.
+
+    The file columns are ``x, y, rho/rho0, p/p0, u/a0, v/a0, q/a0, M``.  Each
+    streamtube is separated by blank lines.  ``p/p0`` is interpolated at the
+    chosen ``x_plane`` for each tube and mapped to ``[-0.5, 0.5]`` via the pitch
+    length.
+
+    Parameters
+    ----------
+    smooth : bool, optional
+        If ``True`` the loss distribution is smoothed before returning.
+    window_length : int, optional
+        Window length for the Savitzky–Golay filter.
+    polyorder : int, optional
+        Polynomial order for the Savitzky–Golay filter.
+    """
+    df = MISES_extract_plane_data(field_file, x_plane, pitch, atol)
+    if df is None:
+        return None
+
+    p0 = compute_total_pressure(P01 * df['p_norm'].values,
+                                df['M'].values, gamma=1.4)
+    P0_in = P01
+    df['loss'] = (P0_in - p0) / P0_in
+
+    if smooth:
+        y = df['loss'].values
+        wl = window_length if window_length % 2 == 1 else window_length + 1
+        max_wl = len(y) if len(y) % 2 == 1 else len(y) - 1
+        if wl > max_wl:
+            wl = max_wl
+        if wl < polyorder + 2:
+            wl = polyorder + 2
+            if wl % 2 == 0:
+                wl += 1
+            if wl > max_wl:
+                wl = max_wl
+        df['loss'] = savgol_filter(y, wl, polyorder)
+
+    y_out, v_out = start_end_half(df['y_norm'].values, df['loss'].values,
+                                   center_on_max=True)
+    return pd.DataFrame({'y_norm': y_out, 'loss': v_out})
+
+
 def MISES_machDataGather(file_path):
     """
     Reads field data from file_path, skipping the first two header lines.
@@ -1063,81 +1223,3 @@ def MISES_machDataGather(file_path):
     blade_mach = np.concatenate([ps_mach, ss_mach])
     
     return(ps_frac, ss_frac, ps_mach, ss_mach,)
-
-def MISES_DataGather(data, xNorm, y, n):
-    index_closest_to_zero = np.abs(data - max(data)).argmin() #Finds the index where the pressure value is closest to pmax (argmin used since the abs difference is an array)
-    xSS = xNorm[index_closest_to_zero:]
-    xSS = np.concatenate((xSS, xNorm[:n*3]))
-    ySS = y[index_closest_to_zero:]
-    ySS = np.concatenate((ySS, y[:n*3]))
-    dataSS = data[index_closest_to_zero:]
-    dataSS = np.concatenate((dataSS, data[:n*3]))
-    dataSS = savgol_filter(dataSS, window_length=15, polyorder=3) #Smooth out the mach number data
-    
-    #X and Y pressure side values organizing to obtain mach numbers for pressure side
-    xPS = xNorm[index_closest_to_zero:n*7-3:-1]
-    xPS = np.concatenate((xPS, xNorm[n*7-3:n*4-2:-1]))
-    yPS = y[index_closest_to_zero:n*7-3:-1]
-    yPS = np.concatenate((yPS, y[n*7-3:n*4-2:-1]))
-    dataPS = data[index_closest_to_zero:n*7-3:-1]
-    dataPS = np.concatenate((dataPS, data[n*7-3:n*4-2:-1]))
-    dataPS = savgol_filter(dataPS, window_length=15, polyorder=3) #Smooth out the mach number data
-    
-    #Normalization of Suction Side x-component
-    dxSS = np.diff(xSS)
-    dySS = np.diff(ySS)
-    segment_lengthsSS = np.sqrt(dxSS**2 + dySS**2)
-    lengths_cumulativeSS = np.cumsum(segment_lengthsSS) #Array where each element is the sum of all previous segment lengths. Needed to normalize
-    xSSnorm = lengths_cumulativeSS/lengths_cumulativeSS[-1] #Suction side x component normalization
-    
-    #Normalization of Pressure Side x-component
-    dxPS = np.diff(xPS)
-    dyPS = np.diff(yPS)
-    segment_lengthsPS = np.sqrt(dxPS**2 + dyPS**2)
-    lengths_cumulativePS = np.cumsum(segment_lengthsPS)
-    xPSnorm = lengths_cumulativePS/lengths_cumulativePS[-1]
-    
-    #Suction side trailing edge mach number
-    dataSSTrial = data[index_closest_to_zero:]
-    dataSSTrial = np.concatenate((dataSSTrial, data[:n*3]))
-    dataSSTE = dataSSTrial[-1]
-    
-    return(xSSnorm, xPSnorm, dataSS, dataPS, dataSSTE)
-
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-#   Paraview Integration
-# ─────────────────────────────────────────────────────────────────────────────
-
-def launch_paraview_live(run_dir, bladeName, suffix):
-    """Open the volume VTU file in Paraview once it becomes available."""
-    volume_vtu = run_dir / f"volume_flow_{suffix}_{bladeName}.vtu"
-    while not volume_vtu.exists():
-        time.sleep(1)
-    '''    
-    #"""Open Paraview GUI with the live visualization macro."""
-    script_path = Path(__file__).resolve().parent / 'liveParaview_datablade.py'
-    paraview = shutil.which('paraview') or shutil.which('paraview.exe')
-    if paraview is None:
-        raise FileNotFoundError('paraview executable not found')
-    #os.environ["PATH"] = ";".join([*os.environ["PATH"].split(";"),"C:\\Program Files\\ParaView-5.12.0-MPI-Windows-Python3.10-msvc2017-AMD64\\bin",])
-    subprocess.Popen([
-        paraview,
-        f"--script={script_path}",
-        str(run_dir),
-        bladeName,
-        suffix,
-    ])'''
-    
-    
-def ask_view_live(blade_name: str) -> bool:
-    """Show a yes/no dialog asking whether to view the live simulation."""
-    root = tk.Tk()
-    root.withdraw()
-    resp = messagebox.askyesno(
-        title="Live simulation",
-        message=f"Would you like to review the live simulation of {blade_name}?",
-    )
-    root.destroy()
-    return resp
