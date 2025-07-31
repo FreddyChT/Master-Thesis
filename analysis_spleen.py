@@ -78,6 +78,7 @@ def load_exp_pl06(base_dir: Path, P01: float, Re_tag: str, M_tag: str):
 
 def post_processing_spleen(run_dir: Path, base_dir: Path,
                            bladeName: str,
+                           string: str,
                            P01: float, alpha2: float,
                            x_plane: float, pitch: float,
                            axial_chord: float,
@@ -86,7 +87,58 @@ def post_processing_spleen(run_dir: Path, base_dir: Path,
                            Re_tag: str = '70',
                            M_tag: str = '090'):
     """Plot SU2 results against SPLEEN experimental data."""
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    #   HISTORY FILE TRACKING - Residuals, Linear Solvers, CFL, CD, CL
+    # ─────────────────────────────────────────────────────────────────────────────
+    
+    residuals_file = run_dir / f'history_{string}_{bladeName}.csv'
+    hist = pd.read_csv(residuals_file)
 
+    # RMS Tracking
+    plt.plot(hist['Inner_Iter'], hist['    "rms[Rho]"    '], label=r'$\rho$')               # Density
+    plt.plot(hist['Inner_Iter'], hist['    "rms[RhoU]"   '], label=r'$\rho u$')             # Momentum-x
+    plt.plot(hist['Inner_Iter'], hist['    "rms[RhoE]"   '], label=r'$\rho E$')             # Energy
+    #plt.plot(hist['Inner_Iter'], hist['    "rms[RhoV]"   '], label=r'$\rho v$')            # Momentum-y
+    #plt.plot(hist['Inner_Iter'], hist['     "rms[nu]"    '], label='v')                    # Viscosity
+    #plt.plot(hist['Inner_Iter'], hist['     "rms[k]"    '], label='k')                     # TKE
+    #plt.plot(hist['Inner_Iter'], hist['     "rms[w]"    '], label='w')
+    #plt.grid(alpha=0.3);  
+    plt.legend();  plt.xlabel('Iteration')
+    plt.ylabel(f'RMS residual - {bladeName}');
+    plt.savefig(run_dir / f'rms_residual_{string}_{bladeName}.svg', format='svg', bbox_inches='tight')
+    plt.show()
+
+    # Linear Solver Tracking
+    plt.plot(hist['Inner_Iter'], hist['    "LinSolRes"   '], label='LSRes')                 # Linear Solver Residual
+    plt.plot(hist['Inner_Iter'], hist['  "LinSolResTurb" '], label='LSResTurb')             # Linear Solver Residual
+    #plt.grid(alpha=0.3);  
+    plt.legend();  plt.xlabel('Iteration')
+    plt.ylabel(f'Linear Solver residual - {bladeName}');
+    plt.savefig(run_dir / f'linear_solver_residual_{string}_{bladeName}.svg', format='svg', bbox_inches='tight')
+    plt.show()
+
+    # CFL Tracking
+    plt.plot(hist['Inner_Iter'], hist['     "Avg CFL"    '], label='CFL')                   # CFL used per iteration
+    #plt.grid(alpha=0.3);  
+    plt.legend();  plt.xlabel('Iteration')
+    plt.ylabel(f'Average CFL - {bladeName}');
+    plt.savefig(run_dir / f'cfl_{string}_{bladeName}.svg', format='svg', bbox_inches='tight')
+    plt.show()
+
+    # Aero Coefficients Tracking
+    plt.plot(hist['Inner_Iter'], hist['   "CD(blade1)"   '], label='CD')                    # Drag Coefficient
+    plt.plot(hist['Inner_Iter'], hist['   "CL(blade1)"   '], label='CL')                    # Lift Coefficient
+    #plt.grid(alpha=0.3);  
+    plt.legend();  plt.xlabel('Iteration')
+    plt.ylabel(f'Aerodynamic Coefficients - {bladeName}');
+    plt.savefig(run_dir / f'aero_coefficients_{string}_{bladeName}.svg', format='svg', bbox_inches='tight')
+    plt.show()
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    #   SIMULATIONS DATA
+    # ─────────────────────────────────────────────────────────────────────────────    
+    
     su2_file = run_dir / f"surface_flowdatabladeVALIDATION_{bladeName}.csv"
     df = pd.read_csv(su2_file)
     _, _, dataSS, dataPS = utils.SU2_organize(df)
@@ -181,7 +233,6 @@ base_dir = Path(__file__).resolve().parents[4]
 blade_dir = base_dir / 'Blades' / bladeName
 isesFilePath = blade_dir / f'ises.{string}'
 bladeFilePath = blade_dir / f'blade.{string}'
-outletFilePath = blade_dir / f'outlet.{string}'
 
 alpha1_deg = {alpha1_deg}
 alpha2_deg = {alpha2_deg}
@@ -239,7 +290,6 @@ for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
     mod.run_dir = run_dir
     mod.isesFilePath = isesFilePath
     mod.bladeFilePath = bladeFilePath
-    mod.outletFilePath = outletFilePath
 
     mod.alpha1 = alpha1_deg
     mod.alpha2 = alpha2_deg
@@ -514,7 +564,7 @@ def main():
     proc.wait()
     logf.close()
     configSU2_datablade._summarize_su2_log(run_dir / "su2.log")
-    post_processing_spleen(run_dir, base_dir, bladeName,
+    post_processing_spleen(run_dir, base_dir, bladeName, 'databladeVALIDATION',
                            P01, alpha2_deg,
                            x_plane, pitch, axial_chord,
                            sizeCellFluid, gamma, Re_tag=Re_test, M_tag=M_test)

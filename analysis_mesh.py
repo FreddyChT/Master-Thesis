@@ -182,6 +182,11 @@ def _update_mesh_params(scale: float, axial_chord: float) -> None:
     configSU2_datablade.nCellAirfoil = mesh_datablade.nCellAirfoil
     configSU2_datablade.nCellPerimeter = mesh_datablade.nCellPerimeter
     configSU2_datablade.nBoundaryPoints = mesh_datablade.nBoundaryPoints
+    
+    # ``post_processing_datablade`` relies on ``sizeCellFluid`` for
+    # wake sampling.  Ensure the value is propagated here as well.
+    post_processing_datablade.sizeCellFluid = mesh_datablade.sizeCellFluid
+
 
 
 def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float, dict[str, float]]:
@@ -235,7 +240,8 @@ def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float,
 
     dist_inlet = 1
     dist_outlet = 1.5
-
+    x_plane = 0.5
+    
     bl = utils.compute_bl_parameters(u2, rho2, mu, axial_chord,
                                      n_layers=25, y_plus_target=1.0)
     first_layer_height = bl['first_layer_height']
@@ -281,6 +287,7 @@ def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float,
         mod.TI = TI
         mod.dist_inlet = dist_inlet
         mod.dist_outlet = dist_outlet
+        mod.x_plane = x_plane
         mod.first_layer_height = first_layer_height
         mod.bl_growth = bl_growth
         mod.bl_thickness = bl_thickness
@@ -330,7 +337,7 @@ def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float,
 
 def main():
     parser = argparse.ArgumentParser(description='Run mesh convergence study')
-    parser.add_argument('--blade', default='Blade_17', help='Blade name')
+    parser.add_argument('--blade', default='Blade_0', help='Blade name')
     args = parser.parse_args()
 
     blade = args.blade
