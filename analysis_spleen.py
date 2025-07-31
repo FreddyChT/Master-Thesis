@@ -105,17 +105,20 @@ def post_processing_spleen(run_dir: Path, base_dir: Path,
         base_dir, P01, gamma, Re_tag, M_tag)
     exp_x = np.concatenate([ps_frac_e, ss_frac_e])
     exp_m = np.concatenate([ps_mach_e, ss_mach_e])
+    case_label = f"Re={Re_tag}k, M={float(M_tag)/100:.2f}"
 
     utils.SU2_DataPlotting(s_normSS, s_normPS, machSS, machPS,
                            "Mach Number", 'databladeVALIDATION', run_dir, bladeName,
-                           mirror_PS=False, exp_s=exp_x, exp_data=exp_m)
+                           mirror_PS=False, exp_s=exp_x, exp_data=exp_m,
+                           case_label=case_label)
 
     utils.SU2_DataPlotting(s_normSS, s_normPS, yPlusSS, yPlusPS,
-                           "Y Plus", 'databladeVALIDATION', run_dir, bladeName, mirror_PS=True)
+                           "Y Plus", 'databladeVALIDATION', run_dir, bladeName,
+                           mirror_PS=True, case_label=case_label)
 
     utils.SU2_DataPlotting(s_normSS, s_normPS, cfSS, cfPS,
                            "Skin Friction Coefficient", 'databladeVALIDATION', run_dir, bladeName,
-                           mirror_PS=True)
+                           mirror_PS=True, case_label=case_label)
 
     restart_file = run_dir / f"restart_flow_databladeVALIDATION_{bladeName}.csv"
     vol_df = pd.read_csv(restart_file)
@@ -133,6 +136,7 @@ def post_processing_spleen(run_dir: Path, base_dir: Path,
     plt.ylabel(f'Total pressure loss - {bladeName}')
     plt.xlim(-0.6, 0.6)
     plt.legend()
+    plt.title(case_label)
     plt.savefig(run_dir / f"loss_pitch_databladeVALIDATION_{bladeName}.svg",
                 format='svg', bbox_inches='tight')
     plt.show()
@@ -178,6 +182,128 @@ blade_dir = base_dir / 'Blades' / bladeName
 isesFilePath = blade_dir / f'ises.{string}'
 bladeFilePath = blade_dir / f'blade.{string}'
 outletFilePath = blade_dir / f'outlet.{string}'
+
+alpha1_deg = {alpha1_deg}
+alpha2_deg = {alpha2_deg}
+d_factor = {d_factor}
+stagger = {stagger}
+axial_chord = {axial_chord}
+chord = {chord}
+pitch = {pitch}
+pitch2chord = {pitch2chord}
+
+R = {R}
+gamma = {gamma}
+mu = {mu}
+T01 = {T01}
+P1 = {P1}
+P01 = {P01}
+M1 = {M1}
+P2 = {P2}
+M2 = {M2}
+T02 = {T02}
+T2 = {T2}
+c2 = {c2}
+u2 = {u2}
+rho2 = {rho2}
+Re = {Re}
+TI = {TI}
+
+dist_inlet = {dist_inlet}
+dist_outlet = {dist_outlet}
+x_plane = {x_plane}
+sizeCellFluid = {sizeCellFluid}
+sizeCellAirfoil = {sizeCellAirfoil}
+nCellAirfoil = {nCellAirfoil}
+nCellPerimeter = {nCellPerimeter}
+nBoundaryPoints = {nBoundaryPoints}
+first_layer_height = {first_layer_height}
+bl_growth = {bl_growth}
+bl_thickness = {bl_thickness}
+size_LE = {size_LE}
+dist_LE = {dist_LE}
+size_TE = {size_TE}
+dist_TE = {dist_TE}
+VolWAkeIn = {VolWAkeIn}
+VolWAkeOut = {VolWAkeOut}
+WakeXMin = {WakeXMin}
+WakeXMax = {WakeXMax}
+
+for mod in (mesh_datablade, configSU2_datablade, post_processing_datablade):
+    mod.bladeName = bladeName
+    mod.no_cores = no_cores
+    mod.string = string
+    mod.fileExtension = fileExtension
+    mod.base_dir = base_dir
+    mod.blade_dir = blade_dir
+    mod.run_dir = run_dir
+    mod.isesFilePath = isesFilePath
+    mod.bladeFilePath = bladeFilePath
+    mod.outletFilePath = outletFilePath
+
+    mod.alpha1 = alpha1_deg
+    mod.alpha2 = alpha2_deg
+    mod.d_factor = d_factor
+    mod.stagger = stagger
+    mod.axial_chord = axial_chord
+    mod.chord = chord
+    mod.pitch = pitch
+    mod.pitch2chord = pitch2chord
+
+    mod.R = R
+    mod.gamma = gamma
+    mod.mu = mu
+    mod.T01 = T01
+    mod.P1 = P1
+    mod.P01 = P01
+    mod.M1 = M1
+    mod.P2 = P2
+    mod.M2 = M2
+    mod.T02 = T02
+    mod.T2 = T2
+    mod.c2 = c2
+    mod.u2 = u2
+    mod.rho2 = rho2
+    mod.Re = Re
+    mod.TI = TI
+
+    mod.dist_inlet = dist_inlet
+    mod.dist_outlet = dist_outlet
+    mod.x_plane = x_plane
+    mod.sizeCellFluid = sizeCellFluid
+    mod.sizeCellAirfoil = sizeCellAirfoil
+    mod.nCellAirfoil = nCellAirfoil
+    mod.nCellPerimeter = nCellPerimeter
+    mod.nBoundaryPoints = nBoundaryPoints
+    mod.first_layer_height = first_layer_height
+    mod.bl_growth = bl_growth
+    mod.bl_thickness = bl_thickness
+    mod.size_LE = size_LE
+    mod.dist_LE = dist_LE
+    mod.size_TE = size_TE
+    mod.dist_TE = dist_TE
+    mod.VolWAkeIn = VolWAkeIn
+    mod.VolWAkeOut = VolWAkeOut
+    mod.WakeXMin = WakeXMin
+    mod.WakeXMax = WakeXMax
+
+def rerun():
+    mesh_datablade.mesh_datablade()
+    configSU2_datablade.configSU2_datablade()
+    configSU2_datablade.runSU2_datablade()
+    post_processing_datablade.post_processing_datablade()
+
+def replot():
+    post_processing_datablade.post_processing_datablade()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--mode', choices=['rerun', 'replot'], default='replot')
+    args = parser.parse_args()
+    if args.mode == 'rerun':
+        rerun()
+    else:
+        replot()
 """
     with open(script_path, "w") as f:
         f.write(content)

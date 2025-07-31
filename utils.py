@@ -812,8 +812,14 @@ def align_pitch(y_norm, values):
 
     return y_rot, v_rot
 
-def start_end_half(y_norm, values):
+def start_end_half(y_norm, values, center_on_max=False):
     """Return arrays starting at ``-0.5`` and ending at ``0.5``.
+
+    Parameters
+    ----------
+    center_on_max : bool, optional
+        If ``True`` the distribution is shifted so that the maximum ``values``
+        occurs at ``y=0`` before wrapping to ``[-0.5, 0.5]``.
 
     The first point is shifted to ``-0.5`` and appended again at ``+0.5`` to
     ensure a closed distribution for periodic plots.
@@ -825,18 +831,23 @@ def start_end_half(y_norm, values):
     if y_arr.size == 0:
         return y_arr, v_arr
 
-    # sort and shift so the first element becomes -0.5
+    # sort arrays for consistent wrapping
     order = np.argsort(y_arr)
     y_sorted = y_arr[order]
     v_sorted = v_arr[order]
 
-    shift = y_sorted[0] + 0.5
+    if center_on_max:
+        shift = y_sorted[np.argmax(v_sorted)]
+    else:
+        shift = y_sorted[0] + 0.5
+
     y_shift = ((y_sorted - shift + 0.5) % 1.0) - 0.5
 
     y_out = np.append(y_shift, y_shift[0] + 1.0)
     v_out = np.append(v_sorted, v_sorted[0])
 
     return y_out, v_out
+
 
 
 def SU2_organize(df):
@@ -922,9 +933,6 @@ def SU2_total_pressure_loss(
                                 plane_df['Mach'].values, gamma=1.4)
     P0_in = P01
     plane_df['loss'] = (P0_in - p0) / P0_in
-    # remap y/pitch into [-0.5, 0.5] range
-    plane_df['y_norm'] = ((plane_df['y_norm'] + 0.1) % 1.0) - 0.5
-    plane_df = plane_df.sort_values('y_norm').reset_index(drop=True)
 
     y = plane_df['loss'].values
     if smooth:
@@ -940,7 +948,9 @@ def SU2_total_pressure_loss(
                 wl = max_wl
         plane_df['loss'] = savgol_filter(y, wl, polyorder)
 
-    y_out, v_out = start_end_half(plane_df['y_norm'].values, plane_df['loss'].values)
+    y_out, v_out = start_end_half(plane_df['y_norm'].values,
+                                   plane_df['loss'].values,
+                                   center_on_max=True)
     return pd.DataFrame({'y_norm': y_out, 'loss': v_out})
 
 def SU2_DataPlotting(
@@ -954,7 +964,8 @@ def SU2_DataPlotting(
         bladeName,
         mirror_PS=False,
         exp_s=None, # optional experimental x array
-        exp_data=None # optional experimental Mach array
+        exp_data=None, # optional experimental Mach array
+        case_label=None, # optional test case string
     ):
     """
     Plots SU2 results in Non-Norm style (direct values) plus
@@ -978,8 +989,12 @@ def SU2_DataPlotting(
     else:
         plt.xlim(0, 1)
     plt.legend(loc='upper left', edgecolor='k', fancybox=False)
+    if case_label:
+        plt.title(case_label)
     plt.savefig(run_dir / f"non-normalized_{quantity}_{string}_{bladeName}.svg", format='svg', bbox_inches='tight')
     plt.show()
+
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1169,9 +1184,8 @@ def MISES_extract_plane_data(field_file, x_plane, pitch, atol=1e-4):
         print(f"[WARNING] No data found at x = {x_plane} (tol={atol}). Try increasing tolerance.")
         return None
 
-    df = pd.DataFrame({'y_norm': y_vals, 'p_norm': p_vals, 'M':m_vals})
-    df['y_norm'] = ((df['y_norm'] + 0.3) % 1.0) - 0.5
-    df = df.sort_values('y_norm').reset_index(drop=True)
+    df = pd.DataFrame({'y_norm': y_vals, 'p_norm': p_vals, 'M': m_vals})
+    df['y_norm'] = np.asarray(df['y_norm']) % 1.0
     return df
 
 
@@ -1204,12 +1218,12 @@ def MISES_total_pressure_loss(
     df = MISES_extract_plane_data(field_file, x_plane, pitch, atol)
     if df is None:
         return None
-  
+
     p0 = compute_total_pressure(P01 * df['p_norm'].values,
                                 df['M'].values, gamma=1.4)
     P0_in = P01
     df['loss'] = (P0_in - p0) / P0_in
-    
+
     if smooth:
         y = df['loss'].values
         wl = window_length if window_length % 2 == 1 else window_length + 1
@@ -1224,7 +1238,8 @@ def MISES_total_pressure_loss(
                 wl = max_wl
         df['loss'] = savgol_filter(y, wl, polyorder)
 
-    y_out, v_out = start_end_half(df['y_norm'].values, df['loss'].values)
+    y_out, v_out = start_end_half(df['y_norm'].values, df['loss'].values,
+                                   center_on_max=True)
     return pd.DataFrame({'y_norm': y_out, 'loss': v_out})
 
 
