@@ -257,7 +257,7 @@ def post_processing_datablade():
     
     mises_res = MISES_total_pressure_loss(
         mises_fieldFile, p_plane, pitch, P01,
-        atol=0.1*axial_chord, smooth=True, window_length=15, polyorder=4)
+        atol=0.025, smooth=True, window_length=15, polyorder=4)
     if mises_res is not None:
         mises_pitch, mises_loss = mises_res['y_norm'], mises_res['loss']
     else:

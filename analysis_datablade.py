@@ -10,10 +10,8 @@ Disclaimer: GPT-o3 & Codex were heavily used for the elaboration of this script
 
 import argparse
 import numpy as np
-import os
 from pathlib import Path
 from datetime import datetime
-import time
 import sys
 import utils
 import mesh_datablade
@@ -214,15 +212,14 @@ def main():
     # ─────────────────────────────────────────────────────────────────────────────
     #   INITIALIZATION
     # ─────────────────────────────────────────────────────────────────────────────
-    sys.argv = ['analysis_datablade.py', '--blades',
-                'Blade_0',
-                'Blade_1',  'Blade_2',  'Blade_3',  'Blade_4',  'Blade_5',  'Blade_6',  'Blade_7',  'Blade_8',  'Blade_9',  'Blade_10',
-                'Blade_11', 'Blade_12', 'Blade_13', 'Blade_14', 'Blade_15', 'Blade_16', 'Blade_17', 'Blade_18', 'Blade_19', 'Blade_20',
-                'Blade_21', 'Blade_22', 'Blade_23', 'Blade_24', 'Blade_25', 'Blade_26']
+    #sys.argv = ['analysis_datablade.py', '--blades',
+    #            'Blade_1',  'Blade_2',  'Blade_3',  'Blade_4',  'Blade_5',  'Blade_6',  'Blade_7',  'Blade_8',  'Blade_9',  'Blade_10',
+    #            'Blade_11', 'Blade_12', 'Blade_13', 'Blade_14', 'Blade_15', 'Blade_16', 'Blade_17', 'Blade_18', 'Blade_19', 'Blade_20',
+    #            'Blade_21', 'Blade_22', 'Blade_23', 'Blade_24', 'Blade_25', 'Blade_26']
     
     # --- USER INPUTS 
     parser = argparse.ArgumentParser(description="Run blade analysis")
-    parser.add_argument('--blade', default='Blade_2', help='Blade name')
+    parser.add_argument('--blade', default='Blade_1', help='Blade name')
     parser.add_argument('--blades', nargs='+', help='Process multiple blades')
     parser.add_argument('--no_cores', type=int, default=12, help='MPI cores for SU2')
     parser.add_argument('--suffix', default='databladeVALIDATION', help='File name suffix')
@@ -297,7 +294,7 @@ def main():
         #--- INLET & OUTLET
         dist_inlet = 1
         dist_outlet = 1.5
-        x_plane = 1
+        x_plane = 0.5
         print(f"Probe plane location: {(x_plane + 1) * axial_chord}")
         
         # -- GEOMETRY EXTRACTION 
@@ -314,8 +311,6 @@ def main():
         
         # --- AIRFOIL RESAMPLING AND TE CLOSING 
         n_points = 1000
-        n_te = 60
-        d_factor = d_factor
         
         # --- MESH BL PARAMETERS
         n_layers = 25

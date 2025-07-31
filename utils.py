@@ -1,23 +1,16 @@
 import numpy as np
-import math
-import shutil
 import pandas as pd
+import shutil
 import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline
 from scipy.signal import savgol_filter
 from scipy.spatial import cKDTree
 from pathlib import Path
-import subprocess
 from OCC.Core.TColgp import TColgp_Array1OfPnt
 from OCC.Core.TColStd import TColStd_Array1OfReal, TColStd_Array1OfInteger
 from OCC.Core.Geom import Geom_BSplineCurve
 from OCC.Core.gp import gp_Pnt
 from math import log10, sqrt
-import os
-import tkinter as tk
-from tkinter import messagebox
-import time
-
 
 
 plt.rcParams.update({
@@ -96,31 +89,6 @@ def extract_from_blade(file_path):
         
     return pitch
 
-def extract_from_outlet(file_path):
-    #Opens the given file, skips header lines, and extracts the first numerical value from the next line.
-    with open(file_path, 'r') as f:
-        # Skip the first line to extract Pitch value
-        for _ in range(19):
-            next(f)
-        # Read the next line and split into tokens
-        line = f.readline()
-        tokens = line.split()
-        # Extract the third token (index 2) and convert it to a float
-        M1_ref = np.float64(tokens[2])
-        
-        for _ in range(3):
-            next(f)
-        # Read the next line and split into tokens
-        line = f.readline()
-        tokens = line.split()
-        # Extract the third token (index 2) and convert it to a float
-        P21_ratio = np.float64(tokens[2])
-        
-        print("Inlet Mach number:", M1_ref)
-        print("P2/P1:", P21_ratio)
-        
-    return M1_ref, P21_ratio
-
 def read_selig_airfoil(path):
     x, y = [], []
     with open(path, 'r') as f:
@@ -131,13 +99,6 @@ def read_selig_airfoil(path):
             x.append(float(toks[0])); y.append(float(toks[1]))
     return np.array(x), np.array(y)
 
-#Data Blade Validation file creation
-def copy_blade_file(original_filename, blade_dir):
-    original_filepath = blade_dir / original_filename
-    new_filename = original_filename + ".databladeValidation"     # Construct the new file name
-    new_filepath = blade_dir / new_filename
-    shutil.copyfile(original_filepath, new_filepath) # Copy the file
-    #print(f"Copied '{original_filename}' to '{new_filename}'.")
 
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -771,47 +732,6 @@ def freestream_total_pressure(Re, M, L, T,
 # ─────────────────────────────────────────────────────────────────────────────
 #   SU2 Post-Processing
 # ─────────────────────────────────────────────────────────────────────────────
-def roll_array(arr, shift):
-    """
-    Rolls the arrays so that idx_maxP is placed at index 0.
-    Ensures the suction side starts at the max‐pressure location for easy plotting.
-    """
-    return np.concatenate([arr[shift:], arr[:shift]])
-
-def align_pitch(y_norm, values):
-    """Align a pitchwise distribution to the nearest integer multiple.
-
-    Parameters
-    ----------
-    y_norm : array_like
-        Normalised pitch positions.
-    values : array_like
-        Quantity defined at each ``y_norm`` location.
-
-    Returns
-    -------
-    tuple(ndarray, ndarray)
-        ``y_norm`` and ``values`` rotated so the point closest to the nearest
-        integer pitch multiple becomes the first entry. ``y_norm`` is shifted so
-        that this location corresponds to zero.
-    """
-
-    y_arr = np.asarray(y_norm, dtype=float)
-    v_arr = np.asarray(values, dtype=float)
-
-    if y_arr.size == 0:
-        return y_arr, v_arr
-
-    nearest = round(float(np.mean(y_arr)))
-    idx = int(np.argmin(np.abs(y_arr - nearest)))
-
-    y_rot = np.roll(y_arr, -idx) - nearest
-    v_rot = np.roll(v_arr, -idx)
-
-    y_rot -= y_rot[0]
-
-    return y_rot, v_rot
-
 def start_end_half(y_norm, values, center_on_max=False):
     """Return arrays starting at ``-0.5`` and ending at ``0.5``.
 
@@ -1303,44 +1223,3 @@ def MISES_machDataGather(file_path):
     blade_mach = np.concatenate([ps_mach, ss_mach])
     
     return(ps_frac, ss_frac, ps_mach, ss_mach,)
-
-def MISES_DataGather(data, xNorm, y, n):
-    index_closest_to_zero = np.abs(data - max(data)).argmin() #Finds the index where the pressure value is closest to pmax (argmin used since the abs difference is an array)
-    xSS = xNorm[index_closest_to_zero:]
-    xSS = np.concatenate((xSS, xNorm[:n*3]))
-    ySS = y[index_closest_to_zero:]
-    ySS = np.concatenate((ySS, y[:n*3]))
-    dataSS = data[index_closest_to_zero:]
-    dataSS = np.concatenate((dataSS, data[:n*3]))
-    dataSS = savgol_filter(dataSS, window_length=15, polyorder=3) #Smooth out the mach number data
-    
-    #X and Y pressure side values organizing to obtain mach numbers for pressure side
-    xPS = xNorm[index_closest_to_zero:n*7-3:-1]
-    xPS = np.concatenate((xPS, xNorm[n*7-3:n*4-2:-1]))
-    yPS = y[index_closest_to_zero:n*7-3:-1]
-    yPS = np.concatenate((yPS, y[n*7-3:n*4-2:-1]))
-    dataPS = data[index_closest_to_zero:n*7-3:-1]
-    dataPS = np.concatenate((dataPS, data[n*7-3:n*4-2:-1]))
-    dataPS = savgol_filter(dataPS, window_length=15, polyorder=3) #Smooth out the mach number data
-    
-    #Normalization of Suction Side x-component
-    dxSS = np.diff(xSS)
-    dySS = np.diff(ySS)
-    segment_lengthsSS = np.sqrt(dxSS**2 + dySS**2)
-    lengths_cumulativeSS = np.cumsum(segment_lengthsSS) #Array where each element is the sum of all previous segment lengths. Needed to normalize
-    xSSnorm = lengths_cumulativeSS/lengths_cumulativeSS[-1] #Suction side x component normalization
-    
-    #Normalization of Pressure Side x-component
-    dxPS = np.diff(xPS)
-    dyPS = np.diff(yPS)
-    segment_lengthsPS = np.sqrt(dxPS**2 + dyPS**2)
-    lengths_cumulativePS = np.cumsum(segment_lengthsPS)
-    xPSnorm = lengths_cumulativePS/lengths_cumulativePS[-1]
-    
-    #Suction side trailing edge mach number
-    dataSSTrial = data[index_closest_to_zero:]
-    dataSSTrial = np.concatenate((dataSSTrial, data[:n*3]))
-    dataSSTE = dataSSTrial[-1]
-    
-    return(xSSnorm, xPSnorm, dataSS, dataPS, dataSSTE)
-

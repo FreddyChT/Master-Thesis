@@ -1,6 +1,5 @@
-import os
 import numpy as np
-from utils import process_airfoil_file
+from utils import *
 
 '''
 bladeFilePath, run_dir, string, bladeName,                          # File management                
