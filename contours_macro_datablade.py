@@ -20,19 +20,74 @@ paraview.simple._DisableFirstRenderCameraReset()
 # -----------------------------------------------------------------------------
 import sys
 import glob
+import numpy as np
+from pathlib import Path
 
-# pick the VTU file from the first command line argument or search for one
-if len(sys.argv) > 1:
-    volume_vtu = sys.argv[1]
-else:
-    matches = glob.glob("volume_flow_datablade*Blade_*.vtu")
-    volume_vtu = matches[0] if matches else "volume_flow_databladeVALIDATION_Blade_0.vtu"
-    
+# try to infer the VTU path from the active source
+volume_source = GetActiveSource()
+volume_vtu = ''
+if volume_source is not None:
+    file_prop = getattr(volume_source, 'FileName', '')
+    if isinstance(file_prop, (list, tuple)):
+        volume_vtu = file_prop[0]
+    elif isinstance(file_prop, str):
+        volume_vtu = file_prop
+
+# fall back to command-line argument or glob search
+if not volume_vtu:
+    if len(sys.argv) > 1:
+        volume_vtu = sys.argv[1]
+    else:
+        matches = glob.glob("volume_flow_datablade*Blade_*.vtu")
+        volume_vtu = matches[0] if matches else "volume_flow_databladeVALIDATION_Blade_0.vtu"
+
 volume_vtu = volume_vtu.replace('\\', '/')
 vtu_dir, vtu_file = volume_vtu.rsplit('/', 1) if '/' in volume_vtu else ('', volume_vtu)
 stem = vtu_file.split('.', 1)[0]
 blade_id = stem.rsplit('_', 1)[-1]
 history_csv_path = f"{vtu_dir}/history_databladeVALIDATION_Blade_{blade_id}.csv" if vtu_dir else f"history_databladeVALIDATION_Blade_{blade_id}.csv"
+
+# Extract blade pitch from blade.databladeVALIDATION
+def find_file_upwards(start_dir, relative_path):
+    path = Path(start_dir) if start_dir else Path('.')
+    for parent in [path] + list(path.parents):
+        candidate = parent / relative_path
+        if candidate.is_file():
+            return candidate
+    return None
+
+# try locating blade.databladeVALIDATION near the VTU file
+blade_file = find_file_upwards(vtu_dir, 'blade.databladeVALIDATION')
+
+# final fallback: search the current tree for the blade file
+if blade_file is None:
+    matches = list(Path('.').rglob(f'Blade_{blade_id}/blade.databladeVALIDATION'))
+    blade_file = matches[0] if matches else None
+
+if blade_file is not None:
+    with open(blade_file, 'r') as f:
+        next(f)
+        line = f.readline()
+        pitch = np.float64(line.split()[4])
+else:
+    # try to read pitch from rerun.py colocated with the VTU file
+    rerun_file = Path(vtu_dir) / 'rerun.py' if vtu_dir else Path('rerun.py')
+    if rerun_file.is_file():
+        try:
+            with open(rerun_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('pitch ='):
+                        pitch = np.float64(line.split('=', 1)[1].strip())
+                        break
+                else:
+                    raise ValueError('pitch line not found')
+        except Exception as e:
+            pitch = 0.03295
+            print(f"rerun.py found but failed to extract pitch ({e}); using default pitch {pitch}")
+    else:
+        pitch = 0.03295
+        print(f"blade.databladeVALIDATION and rerun.py not found; using default pitch {pitch}")
 
 # get active view
 renderView1 = GetActiveViewOrCreate('RenderView')
@@ -83,7 +138,7 @@ AssignViewToLayout(view=renderView3, layout=layout1, hint=6)
 SetActiveView(renderView2)
 
 # find source
-volume_flow_databladeVALIDATION_Blade_0vtu = FindSource('volume_flow_databladeVALIDATION_Blade_0.vtu')
+volume_flow_databladeVALIDATION_Blade_0vtu = volume_source if volume_source is not None else FindSource('volume_flow_databladeVALIDATION_Blade_0.vtu')
 
 # create a new 'Append Datasets'
 appendDatasets1 = AppendDatasets(registrationName='AppendDatasets1', Input=volume_flow_databladeVALIDATION_Blade_0vtu)
@@ -154,49 +209,49 @@ renderView2.Update()
 SetActiveSource(appendDatasets1)
 
 # Properties modified on appendDatasets1Display
-appendDatasets1Display.Position = [0.0, 0.03295, 0.0]
+appendDatasets1Display.Position = [0.0, pitch, 0.0]
 
 # Properties modified on appendDatasets1Display.DataAxesGrid
-appendDatasets1Display.DataAxesGrid.Position = [0.0, 0.03295, 0.0]
+appendDatasets1Display.DataAxesGrid.Position = [0.0, pitch, 0.0]
 
 # Properties modified on appendDatasets1Display.PolarAxes
-appendDatasets1Display.PolarAxes.Translation = [0.0, 0.03295, 0.0]
+appendDatasets1Display.PolarAxes.Translation = [0.0, pitch, 0.0]
 
 # set active source
 SetActiveSource(appendDatasets2)
 
 # Properties modified on appendDatasets2Display
-appendDatasets2Display.Position = [0.0, -0.03295, 0.0]
+appendDatasets2Display.Position = [0.0, -pitch, 0.0]
 
 # Properties modified on appendDatasets2Display.DataAxesGrid
-appendDatasets2Display.DataAxesGrid.Position = [0.0, -0.03295, 0.0]
+appendDatasets2Display.DataAxesGrid.Position = [0.0, -pitch, 0.0]
 
 # Properties modified on appendDatasets2Display.PolarAxes
-appendDatasets2Display.PolarAxes.Translation = [0.0, -0.03295, 0.0]
+appendDatasets2Display.PolarAxes.Translation = [0.0, -pitch, 0.0]
 
 # set active source
 SetActiveSource(appendDatasets3)
 
 # Properties modified on appendDatasets3Display
-appendDatasets3Display.Position = [0.0, 0.0659, 0.0]
+appendDatasets3Display.Position = [0.0, 2*pitch, 0.0]
 
 # Properties modified on appendDatasets3Display.DataAxesGrid
-appendDatasets3Display.DataAxesGrid.Position = [0.0, 0.0659, 0.0]
+appendDatasets3Display.DataAxesGrid.Position = [0.0, 2*pitch, 0.0]
 
 # Properties modified on appendDatasets3Display.PolarAxes
-appendDatasets3Display.PolarAxes.Translation = [0.0, 0.0659, 0.0]
+appendDatasets3Display.PolarAxes.Translation = [0.0, 2*pitch, 0.0]
 
 # set active source
 SetActiveSource(appendDatasets4)
 
 # Properties modified on appendDatasets4Display
-appendDatasets4Display.Position = [0.0, -0.0659, 0.0]
+appendDatasets4Display.Position = [0.0, -2*pitch, 0.0]
 
 # Properties modified on appendDatasets4Display.DataAxesGrid
-appendDatasets4Display.DataAxesGrid.Position = [0.0, -0.0659, 0.0]
+appendDatasets4Display.DataAxesGrid.Position = [0.0, -2*pitch, 0.0]
 
 # Properties modified on appendDatasets4Display.PolarAxes
-appendDatasets4Display.PolarAxes.Translation = [0.0, -0.0659, 0.0]
+appendDatasets4Display.PolarAxes.Translation = [0.0, -2*pitch, 0.0]
 
 # set active source
 SetActiveSource(volume_flow_databladeVALIDATION_Blade_0vtu)
@@ -383,49 +438,49 @@ renderView3.Update()
 SetActiveSource(appendDatasets1)
 
 # Properties modified on appendDatasets1Display_1
-appendDatasets1Display_1.Position = [0.0, 0.03295, 0.0]
+appendDatasets1Display_1.Position = [0.0, pitch, 0.0]
 
 # Properties modified on appendDatasets1Display_1.DataAxesGrid
-appendDatasets1Display_1.DataAxesGrid.Position = [0.0, 0.03295, 0.0]
+appendDatasets1Display_1.DataAxesGrid.Position = [0.0, pitch, 0.0]
 
 # Properties modified on appendDatasets1Display_1.PolarAxes
-appendDatasets1Display_1.PolarAxes.Translation = [0.0, 0.03295, 0.0]
+appendDatasets1Display_1.PolarAxes.Translation = [0.0, pitch, 0.0]
 
 # set active source
 SetActiveSource(appendDatasets2)
 
 # Properties modified on appendDatasets2Display_1
-appendDatasets2Display_1.Position = [0.0, -0.03295, 0.0]
+appendDatasets2Display_1.Position = [0.0, -pitch, 0.0]
 
 # Properties modified on appendDatasets2Display_1.DataAxesGrid
-appendDatasets2Display_1.DataAxesGrid.Position = [0.0, -0.03295, 0.0]
+appendDatasets2Display_1.DataAxesGrid.Position = [0.0, -pitch, 0.0]
 
 # Properties modified on appendDatasets2Display_1.PolarAxes
-appendDatasets2Display_1.PolarAxes.Translation = [0.0, -0.03295, 0.0]
+appendDatasets2Display_1.PolarAxes.Translation = [0.0, -pitch, 0.0]
 
 # set active source
 SetActiveSource(appendDatasets3)
 
 # Properties modified on appendDatasets3Display_1
-appendDatasets3Display_1.Position = [0.0, 0.0659, 0.0]
+appendDatasets3Display_1.Position = [0.0, 2*pitch, 0.0]
 
 # Properties modified on appendDatasets3Display_1.DataAxesGrid
-appendDatasets3Display_1.DataAxesGrid.Position = [0.0, 0.0659, 0.0]
+appendDatasets3Display_1.DataAxesGrid.Position = [0.0, 2*pitch, 0.0]
 
 # Properties modified on appendDatasets3Display_1.PolarAxes
-appendDatasets3Display_1.PolarAxes.Translation = [0.0, 0.0659, 0.0]
+appendDatasets3Display_1.PolarAxes.Translation = [0.0, 2*pitch, 0.0]
 
 # set active source
 SetActiveSource(appendDatasets4)
 
 # Properties modified on appendDatasets4Display_1
-appendDatasets4Display_1.Position = [0.0, -0.0659, 0.0]
+appendDatasets4Display_1.Position = [0.0, -2*pitch, 0.0]
 
 # Properties modified on appendDatasets4Display_1.DataAxesGrid
-appendDatasets4Display_1.DataAxesGrid.Position = [0.0, -0.0659, 0.0]
+appendDatasets4Display_1.DataAxesGrid.Position = [0.0, -2*pitch, 0.0]
 
 # Properties modified on appendDatasets4Display_1.PolarAxes
-appendDatasets4Display_1.PolarAxes.Translation = [0.0, -0.0659, 0.0]
+appendDatasets4Display_1.PolarAxes.Translation = [0.0, -2*pitch, 0.0]
 
 # set active source
 SetActiveSource(volume_flow_databladeVALIDATION_Blade_0vtu)
@@ -564,6 +619,27 @@ renderView3.CameraPosition = [0.013824403255312596, -0.0069232336573539065, 0.74
 renderView3.CameraFocalPoint = [0.013824403255312596, -0.0069232336573539065, 0.0]
 renderView3.CameraParallelScale = 0.03450988191746806
 
+
+#--------------------------------
+# saving layout sizes for layouts
+
+# layout/tab size in pixels
+layout1.SetSize(1796, 1079)
+
+#-----------------------------------
+# saving camera placements for views
+
+# current camera placement for renderView2
+renderView2.InteractionMode = '2D'
+renderView2.CameraPosition = [0.565080912105909, 1.5407264776490739, 19.351978909705245]
+renderView2.CameraFocalPoint = [0.565080912105909, 1.5407264776490739, 0.0]
+renderView2.CameraParallelScale = 0.9008516529732421
+
+# current camera placement for renderView3
+renderView3.InteractionMode = '2D'
+renderView3.CameraPosition = [0.5493781400960493, 1.5300506334542094, 19.351978909705245]
+renderView3.CameraFocalPoint = [0.5493781400960493, 1.5300506334542094, 0.0]
+renderView3.CameraParallelScale = 0.9008516529732421
 
 ##--------------------------------------------
 ## You may need to add some code at the end of this python script depending on your usage, eg:
