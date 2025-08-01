@@ -321,8 +321,8 @@ def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float,
 
     hist_file = run_dir / f"history_databladeVALIDATION_{blade}.csv"
     hist = pd.read_csv(hist_file)
-    cd = hist['   "CD(blade1)"   '].iat[-1]
-    cl = hist['   "CL(blade1)"   '].iat[-1]
+    cd = hist['   "CD(blade1)"   '].tail(500).mean()
+    cl = hist['   "CL(blade1)"   '].tail(500).mean()
 
     log_file = run_dir / "su2.log"
     metrics = _parse_mesh_quality(log_file)
@@ -394,7 +394,7 @@ def main():
     ax1.set_xlabel('Number of Elements')
     ax1.set_ylabel('$C_l$', color='tab:blue')
     ax1.tick_params(axis='y', labelcolor='tab:blue')
-
+    
     ax2 = ax1.twinx()
     ax2.plot(elems, Cds, 's-', label='$C_d$', color='tab:orange')
     if any(diverged):
@@ -403,14 +403,18 @@ def main():
                  'x', color='red')
     ax2.set_ylabel('$C_d$', color='tab:orange')
     ax2.tick_params(axis='y', labelcolor='tab:orange')
-
+    
+    # Scientific formatter with 10^-2 scale
+    from matplotlib.ticker import ScalarFormatter
+    formatter = ScalarFormatter(useMathText=True)
+    formatter.set_powerlimits((-2, -2))
+    formatter.set_scientific(True)
+    ax1.yaxis.set_major_formatter(formatter)
+    ax2.yaxis.set_major_formatter(formatter)
+    
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax1.legend(lines1 + lines2, labels1 + labels2, loc='best')
-
-    ax1.grid(True, alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(study_dir / 'mesh_convergence.svg', format='svg')
 
     def _plot(values, ylabel, filename):
         if all(v is None for v in values):

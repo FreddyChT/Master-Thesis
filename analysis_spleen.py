@@ -94,6 +94,8 @@ def post_processing_spleen(run_dir: Path, base_dir: Path,
     
     residuals_file = run_dir / f'history_{string}_{bladeName}.csv'
     hist = pd.read_csv(residuals_file)
+    total_time = hist['    "Time(sec)"   '].sum()
+    last_iter = hist['Inner_Iter'].iloc[-1]
 
     # RMS Tracking
     plt.plot(hist['Inner_Iter'], hist['    "rms[Rho]"    '], label=r'$\rho$')               # Density
@@ -103,9 +105,17 @@ def post_processing_spleen(run_dir: Path, base_dir: Path,
     #plt.plot(hist['Inner_Iter'], hist['     "rms[nu]"    '], label='v')                    # Viscosity
     #plt.plot(hist['Inner_Iter'], hist['     "rms[k]"    '], label='k')                     # TKE
     #plt.plot(hist['Inner_Iter'], hist['     "rms[w]"    '], label='w')
-    #plt.grid(alpha=0.3);  
-    plt.legend();  plt.xlabel('Iteration')
-    plt.ylabel(f'RMS residual - {bladeName}');
+    #plt.grid(alpha=0.3);
+    ax = plt.gca()
+    ax_time = ax.twinx()
+    ax_time.plot([0, last_iter], [0, total_time], color='grey', linestyle='--', linewidth=1,
+                 label='Time [s]')
+    ax_time.set_ylabel('Time [s]')
+    lines1, labels1 = ax.get_legend_handles_labels()
+    lines2, labels2 = ax_time.get_legend_handles_labels()
+    ax.legend(lines1 + lines2, labels1 + labels2, loc='upper center', ncol=2)
+    ax.set_xlabel('Iteration')
+    ax.set_ylabel(f'RMS residual - {bladeName}')
     plt.savefig(run_dir / f'rms_residual_{string}_{bladeName}.svg', format='svg', bbox_inches='tight')
     plt.show()
 
@@ -395,8 +405,8 @@ def main():
     d_factor = 0.0
     
     #---- TESTING SETTINGS ----
-    Re_exp = 70 
-    M_exp = 90
+    Re_exp = 70
+    M_exp = 70
     St_test     = '000'
     Re_test     = f'{Re_exp}'
     M_test      = f'0{M_exp}'

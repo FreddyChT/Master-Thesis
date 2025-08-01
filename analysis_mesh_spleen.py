@@ -72,15 +72,16 @@ def prepare_spleen_params():
     T01 = 300.0
     M2 = 0.90
     Re = 70000
+    P1 = 9310.72429 
+    P01 = 9500
+    P2 = 5617
 
-    P1, P01 = utils.freestream_total_pressure(Re, M2, axial_chord, T01)
     M1 = utils.compute_Mx(P01, P1, gamma)
     T02 = T01
-    T2 = T02 / (1 + (gamma - 1) / 2 * M2 ** 2)
-    c2 = (gamma * R * T2) ** 0.5
+    T2 = utils.compute_Tx(T02, M2, gamma)
+    c2 = math.sqrt(gamma * R * T2)
     u2 = M2 * c2
-    rho2 = mu * Re / (u2 * math.cos(math.radians(stagger)))
-    P2 = P01 / (1 + (gamma - 1) / 2 * M2 ** 2) ** (gamma / (gamma - 1))
+    rho2 = mu * 70000 / (u2 * math.cos(math.radians(stagger)))
     TI = 2.0
 
     # Mesh parameters
@@ -384,8 +385,8 @@ def run_one(run_dir: Path, scale: float) -> tuple[int, float, float, dict[str, f
 
     hist_file = run_dir / f"history_databladeVALIDATION_{blade}.csv"
     hist = pd.read_csv(hist_file)
-    cd = hist['   "CD(blade1)"   '].iat[-1]
-    cl = hist['   "CL(blade1)"   '].iat[-1]
+    cd = hist['   "CD(blade1)"   '].tail(500).mean()
+    cl = hist['   "CL(blade1)"   '].tail(500).mean()
 
     log_file = run_dir / "su2.log"
     metrics = _parse_mesh_quality(log_file)
@@ -405,9 +406,9 @@ def main():
     run_root.mkdir(exist_ok=True)
     study_dir = run_root / f"MeshStudy_{datetime.now().strftime('%d-%m-%Y_%H%M')}"
     study_dir.mkdir()
-
-    targets = [1e4, 2e4, 3e4, 4e4, 8e4, 1.2e5]
-    baseline = 8.6e4
+    
+    targets = [5e3, 2e4, 4e4, 9e4, 1.5e5, 2.5e5]
+    baseline = 5.8e4
 
     results = []
     for target in targets:
@@ -445,6 +446,7 @@ def main():
     print('\nGCI results (CL):', gci_cl)
     print('GCI results (CD):', gci_cd)
 
+    
     fig, ax1 = plt.subplots(figsize=(6, 4))
     ax1.plot(elems, Cls, 'o-', label='$C_l$', color='tab:blue')
     if any(diverged):
@@ -476,7 +478,7 @@ def main():
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax1.legend(lines1 + lines2, labels1 + labels2, loc='best')
     
-    ax1.grid(True, alpha=0.3)
+    ax1.grid(False)
     fig.tight_layout()
     fig.savefig(study_dir / 'mesh_convergence.svg', format='svg')
 
@@ -492,7 +494,7 @@ def main():
                      'x', color='red')
         plt.xlabel('Number of Elements')
         plt.ylabel(ylabel)
-        plt.grid(True, alpha=0.3)
+        plt.grid(False)
         plt.tight_layout()
         plt.savefig(study_dir / filename, format='svg')
 
