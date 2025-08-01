@@ -385,9 +385,13 @@ def run_one(run_dir: Path, scale: float) -> tuple[int, float, float, dict[str, f
 
     hist_file = run_dir / f"history_databladeVALIDATION_{blade}.csv"
     hist = pd.read_csv(hist_file)
-    cd = hist['   "CD(blade1)"   '].tail(500).mean()
-    cl = hist['   "CL(blade1)"   '].tail(500).mean()
-
+    #cd = hist['   "CD(blade1)"   '].tail(500).mean()
+    #cl = hist['   "CL(blade1)"   '].tail(500).mean()
+    cd_series = hist['   "CD(blade1)"   ']
+    cd = cd_series.iloc[2500:].mean() if len(cd_series) >= 2500 else cd_series.mean()
+    cl_series = hist['   "CL(blade1)"   ']
+    cl = cl_series.iloc[2500:].mean() if len(cl_series) >= 2500 else cl_series.mean()
+    
     log_file = run_dir / "su2.log"
     metrics = _parse_mesh_quality(log_file)
     metrics.setdefault("mesh_time", mesh_time)
@@ -479,6 +483,7 @@ def main():
     ax1.legend(lines1 + lines2, labels1 + labels2, loc='best')
     
     ax1.grid(False)
+    ax2.grid(False)
     fig.tight_layout()
     fig.savefig(study_dir / 'mesh_convergence.svg', format='svg')
 

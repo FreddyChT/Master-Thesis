@@ -321,9 +321,13 @@ def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float,
 
     hist_file = run_dir / f"history_databladeVALIDATION_{blade}.csv"
     hist = pd.read_csv(hist_file)
-    cd = hist['   "CD(blade1)"   '].tail(500).mean()
-    cl = hist['   "CL(blade1)"   '].tail(500).mean()
-
+    #cd = hist['   "CD(blade1)"   '].tail(500).mean()
+    #cl = hist['   "CL(blade1)"   '].tail(500).mean()
+    cd_series = hist['   "CD(blade1)"   ']
+    cd = cd_series.iloc[2500:].mean() if len(cd_series) >= 2500 else cd_series.mean()
+    cl_series = hist['   "CL(blade1)"   ']
+    cl = cl_series.iloc[2500:].mean() if len(cl_series) >= 2500 else cl_series.mean()
+    
     log_file = run_dir / "su2.log"
     metrics = _parse_mesh_quality(log_file)
     metrics.setdefault("mesh_time", mesh_time)
@@ -415,6 +419,11 @@ def main():
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax1.legend(lines1 + lines2, labels1 + labels2, loc='best')
+    
+    ax1.grid(False)
+    ax2.grid(False)
+    fig.tight_layout()
+    fig.savefig(study_dir / 'mesh_convergence.svg', format='svg')
 
     def _plot(values, ylabel, filename):
         if all(v is None for v in values):
@@ -427,7 +436,7 @@ def main():
                      'x', color='red')
         plt.xlabel('Number of Elements')
         plt.ylabel(ylabel)
-        plt.grid(True, alpha=0.3)
+        plt.grid(False)
         plt.tight_layout()
         plt.savefig(study_dir / filename, format='svg')
 

@@ -405,8 +405,8 @@ def main():
     d_factor = 0.0
     
     #---- TESTING SETTINGS ----
-    Re_exp = 70
-    M_exp = 70
+    Re_exp = 120
+    M_exp = 90
     St_test     = '000'
     Re_test     = f'{Re_exp}'
     M_test      = f'0{M_exp}'
