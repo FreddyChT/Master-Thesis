@@ -411,7 +411,7 @@ def main():
     study_dir = run_root / f"MeshStudy_{datetime.now().strftime('%d-%m-%Y_%H%M')}"
     study_dir.mkdir()
     
-    targets = [5e3, 2e4, 4e4, 9e4, 1.5e5, 2.5e5]
+    targets = [5e3, 2e4, 4e4, 9e4, 1.5e5]
     baseline = 5.8e4
 
     results = []
@@ -444,8 +444,8 @@ def main():
     diverged = [r.get('diverged') for r in results]
 
     # GCI based on last three meshes (40k, 80k, 120k approx)
-    gci_cl = _compute_gci(Cls[3:6], elems[3:6]) #_compute_gci(cls[3:6], elems[3:6])
-    gci_cd = _compute_gci(Cds[3:6], elems[3:6]) #_compute_gci(cds[3:6], elems[3:6])
+    gci_cl = _compute_gci(Cls[2:5], elems[2:5]) #_compute_gci(cls[3:6], elems[3:6])
+    gci_cd = _compute_gci(Cds[2:5], elems[2:5]) #_compute_gci(cds[3:6], elems[3:6])
 
     print('\nGCI results (CL):', gci_cl)
     print('GCI results (CD):', gci_cd)

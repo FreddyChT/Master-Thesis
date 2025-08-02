@@ -164,11 +164,8 @@ def compare_runs(run1: Path, run2: Path):
 
 def main():
     sys.argv = ['python model_comparison_spleen.py', 
-                'Blades/Blade_0/results/Test_1_31-07-2025',
-                'Blades/Blade_0/results/Test_2_31-07-2025',
-                #'--label1', 'SA-BCM',
-                #'--label2', 'k-w-SST-LM',
-                #'--output', 'Blades/Blade_0/results/plots'
+                'Blades/Blade_1/results/Test_2_01-08-2025',
+                'Blades/Blade_1/results/Test_2_01-08-2025',
                 ]
     parser = argparse.ArgumentParser(description='Compare two SPLEEN runs')
     parser.add_argument('run1', type=Path, help='Path to first test directory')
