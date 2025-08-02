@@ -472,8 +472,8 @@ def main():
     TI = 2.0
     
     # ------------------ mesh parameters ------------------
-    dist_inlet = 2.0
-    dist_outlet = 3.0
+    dist_inlet = 1.0
+    dist_outlet = 2.0
     x_plane = 1.5  # PL06 location measured from LE
 
     sizeCellFluid = 0.04 * axial_chord

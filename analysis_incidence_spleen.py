@@ -142,8 +142,8 @@ def prepare_spleen_params():
     rho2 = mu * Re / (u2 * np.cos(np.radians(stagger)))
     TI = 2.0
 
-    dist_inlet = 2.0
-    dist_outlet = 3.0
+    dist_inlet = 1.0
+    dist_outlet = 2.0
     x_plane = 1.5
 
     bl = utils.compute_bl_parameters(u2, rho2, mu, axial_chord, n_layers=25, y_plus_target=1.0)

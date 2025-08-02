@@ -22,9 +22,9 @@ def configSU2_datablade():
 
 % ------------- DIRECT, ADJOINT, AND LINEARIZED PROBLEM DEFINITION ------------%
 SOLVER                  = RANS
-KIND_TURB_MODEL         = SST
-%SA_OPTIONS              = BCM
-KIND_TRANS_MODEL        = LM                        % NONE or LM
+KIND_TURB_MODEL         = SA
+SA_OPTIONS              = BCM
+KIND_TRANS_MODEL        = NONE                        % NONE or LM
 MATH_PROBLEM            = DIRECT
 RESTART_SOL             = NO
 
