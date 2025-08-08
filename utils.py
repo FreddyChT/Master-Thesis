@@ -899,7 +899,7 @@ def SU2_DataPlotting(
 
     # Overlay optional experimental distribution
     if (exp_s is not None) and (exp_data is not None):
-        plt.scatter(exp_s, exp_data, s=0.5, color='red', label='Mises Data')
+        plt.scatter(exp_s, exp_data, s=0.5, color='red', label='Exp Data')
 
     plt.ylabel(f'{quantity} - {bladeName}')
     plt.xlabel(r'S/S_{total}')

@@ -212,10 +212,10 @@ def main():
     # ─────────────────────────────────────────────────────────────────────────────
     #   INITIALIZATION
     # ─────────────────────────────────────────────────────────────────────────────
-    #sys.argv = ['analysis_datablade.py', '--blades',
-    #            'Blade_1',  'Blade_2',  'Blade_3',  'Blade_4',  'Blade_5',  'Blade_6',  'Blade_7',  'Blade_8',  'Blade_9',  'Blade_10',
-    #            'Blade_11', 'Blade_12', 'Blade_13', 'Blade_14', 'Blade_15', 'Blade_16', 'Blade_17', 'Blade_18', 'Blade_19', 'Blade_20',
-    #            'Blade_21', 'Blade_22', 'Blade_23', 'Blade_24', 'Blade_25', 'Blade_26']
+    sys.argv = ['analysis_datablade.py', '--blades',
+                'Blade_1',  'Blade_2',  'Blade_3',  'Blade_4',  'Blade_5',  'Blade_6',  'Blade_7',  'Blade_8',  'Blade_9',  'Blade_10',
+                'Blade_11', 'Blade_12', 'Blade_13', 'Blade_14', 'Blade_15', 'Blade_16', 'Blade_17', 'Blade_18', 'Blade_19', 'Blade_20',
+                'Blade_21', 'Blade_22', 'Blade_23', 'Blade_24', 'Blade_25', 'Blade_26']
     
     # --- USER INPUTS 
     parser = argparse.ArgumentParser(description="Run blade analysis")

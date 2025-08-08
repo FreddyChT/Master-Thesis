@@ -182,6 +182,11 @@ def _update_mesh_params(scale: float, axial_chord: float) -> None:
     configSU2_datablade.nCellAirfoil = mesh_datablade.nCellAirfoil
     configSU2_datablade.nCellPerimeter = mesh_datablade.nCellPerimeter
     configSU2_datablade.nBoundaryPoints = mesh_datablade.nBoundaryPoints
+    
+    # ``post_processing_datablade`` relies on ``sizeCellFluid`` for
+    # wake sampling.  Ensure the value is propagated here as well.
+    post_processing_datablade.sizeCellFluid = mesh_datablade.sizeCellFluid
+
 
 
 def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float, dict[str, float]]:
@@ -235,7 +240,8 @@ def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float,
 
     dist_inlet = 1
     dist_outlet = 1.5
-
+    x_plane = 0.5
+    
     bl = utils.compute_bl_parameters(u2, rho2, mu, axial_chord,
                                      n_layers=25, y_plus_target=1.0)
     first_layer_height = bl['first_layer_height']
@@ -281,6 +287,7 @@ def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float,
         mod.TI = TI
         mod.dist_inlet = dist_inlet
         mod.dist_outlet = dist_outlet
+        mod.x_plane = x_plane
         mod.first_layer_height = first_layer_height
         mod.bl_growth = bl_growth
         mod.bl_thickness = bl_thickness
@@ -314,9 +321,13 @@ def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float,
 
     hist_file = run_dir / f"history_databladeVALIDATION_{blade}.csv"
     hist = pd.read_csv(hist_file)
-    cd = hist['   "CD(blade1)"   '].iat[-1]
-    cl = hist['   "CL(blade1)"   '].iat[-1]
-
+    #cd = hist['   "CD(blade1)"   '].tail(500).mean()
+    #cl = hist['   "CL(blade1)"   '].tail(500).mean()
+    cd_series = hist['   "CD(blade1)"   ']
+    cd = cd_series.iloc[2500:].mean() if len(cd_series) >= 2500 else cd_series.mean()
+    cl_series = hist['   "CL(blade1)"   ']
+    cl = cl_series.iloc[2500:].mean() if len(cl_series) >= 2500 else cl_series.mean()
+    
     log_file = run_dir / "su2.log"
     metrics = _parse_mesh_quality(log_file)
     metrics.setdefault("mesh_time", mesh_time)
@@ -330,7 +341,7 @@ def run_one(blade: str, run_dir: Path, scale: float) -> tuple[int, float, float,
 
 def main():
     parser = argparse.ArgumentParser(description='Run mesh convergence study')
-    parser.add_argument('--blade', default='Blade_17', help='Blade name')
+    parser.add_argument('--blade', default='Blade_0', help='Blade name')
     args = parser.parse_args()
 
     blade = args.blade
@@ -387,7 +398,7 @@ def main():
     ax1.set_xlabel('Number of Elements')
     ax1.set_ylabel('$C_l$', color='tab:blue')
     ax1.tick_params(axis='y', labelcolor='tab:blue')
-
+    
     ax2 = ax1.twinx()
     ax2.plot(elems, Cds, 's-', label='$C_d$', color='tab:orange')
     if any(diverged):
@@ -396,12 +407,21 @@ def main():
                  'x', color='red')
     ax2.set_ylabel('$C_d$', color='tab:orange')
     ax2.tick_params(axis='y', labelcolor='tab:orange')
-
+    
+    # Scientific formatter with 10^-2 scale
+    from matplotlib.ticker import ScalarFormatter
+    formatter = ScalarFormatter(useMathText=True)
+    formatter.set_powerlimits((-2, -2))
+    formatter.set_scientific(True)
+    ax1.yaxis.set_major_formatter(formatter)
+    ax2.yaxis.set_major_formatter(formatter)
+    
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax1.legend(lines1 + lines2, labels1 + labels2, loc='best')
-
-    ax1.grid(True, alpha=0.3)
+    
+    ax1.grid(False)
+    ax2.grid(False)
     fig.tight_layout()
     fig.savefig(study_dir / 'mesh_convergence.svg', format='svg')
 
@@ -416,7 +436,7 @@ def main():
                      'x', color='red')
         plt.xlabel('Number of Elements')
         plt.ylabel(ylabel)
-        plt.grid(True, alpha=0.3)
+        plt.grid(False)
         plt.tight_layout()
         plt.savefig(study_dir / filename, format='svg')
 
