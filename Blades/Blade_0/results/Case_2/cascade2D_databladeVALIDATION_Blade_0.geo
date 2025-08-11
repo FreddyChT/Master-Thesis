@@ -2142,8 +2142,8 @@ Transfinite Curve {50} = 183 Using Progression 1;
 // --- BOUNDARY‑LAYER FIELD (curved normals) ---------------
 Field[1] = BoundaryLayer;
 Field[1].EdgesList   = {1100, 1101, 1102, 2102, 2101, 2100};   // SS & PS splines
-Field[1].hwall_n     = 1.963123808180441e-05;
-Field[1].ratio       = 1.2037336576193827;
+Field[1].hwall_n     = 7.852495232721763e-06;
+Field[1].ratio       = 1.15;
 Field[1].thickness   = 0.003935247851407715;
 Field[1].hfar        = 0.0019045599999999998;
 Field[1].Quads       = 1;          // keep quads after recombine

@@ -1,6 +1,6 @@
 
 #!/usr/bin/env python3
-#Created on 11-08-2025, 14:13:05
+#Created on 11-08-2025, 16:47:00
 import argparse
 from pathlib import Path
 import sys
@@ -54,8 +54,8 @@ sizeCellAirfoil = 0.0009522799999999999
 nCellAirfoil = 300
 nCellPerimeter = 183
 nBoundaryPoints = 50
-first_layer_height = 3.926247616360882e-05
-bl_growth = 1.2037336576193827
+first_layer_height = 7.852495232721763e-06
+bl_growth = 1.2
 bl_thickness = 0.003935247851407715
 size_LE = 9.522799999999999e-05
 dist_LE = 0.00047613999999999995

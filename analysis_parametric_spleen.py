@@ -254,11 +254,18 @@ def _run_case(case_id: int, params: Dict, blade_dat: Path,
         params['P01'], dataPS['Pressure'].values, params['gamma'])
     mach_ss = utils.compute_Mx(
         params['P01'], dataSS['Pressure'].values, params['gamma'])
+    # Additional surface data for y-plus and skin friction coefficient
+    yplus_ps = dataPS['Y_Plus'].values
+    yplus_ss = dataSS['Y_Plus'].values
+    cf_ps = dataPS['Skin_Friction_Coefficient_x'].values
+    cf_ss = dataSS['Skin_Friction_Coefficient_x'].values
 
     # Reorder the pressure-side arrays from trailing edge to leading edge so
     # that they share the same orientation as the experimental measurements.
     s_ps = s_ps[::-1]
     mach_ps = mach_ps[::-1]
+    yplus_ps = yplus_ps[::-1]
+    cf_ps = cf_ps[::-1]
     # Wake loss distribution
     vol_df = pd.read_csv(restart_path)
     p_loc = (params['x_plane'] + 1) * params['axial_chord']
@@ -281,6 +288,10 @@ def _run_case(case_id: int, params: Dict, blade_dat: Path,
         's_ps': s_ps,
         'mach_ss': mach_ss,
         'mach_ps': mach_ps,
+        'yplus_ss': yplus_ss,
+        'yplus_ps': yplus_ps,
+        'cf_ss': cf_ss,
+        'cf_ps': cf_ps,
         'wake_y': wake_y,
         'wake_loss': wake_loss,
     }
@@ -305,7 +316,7 @@ def main() -> None:
         if len(vals) != 3:
             raise ValueError(f'{var} requires exactly three values')
         values[var] = vals
-
+        
     # Load experimental Mach distribution once
     ss_frac_e, ps_frac_e, ss_mach_e, ps_mach_e = spleen.load_exp_blade_pt(
         base_dir, params['P01'], params['gamma'], '70', '090')
@@ -330,23 +341,23 @@ def main() -> None:
     # Experimental data already carries the correct orientation; keep as provided
     exp_x = np.concatenate([ps_frac_e, ss_frac_e])
     exp_m = np.concatenate([ps_mach_e, ss_mach_e])
-    # Plot CL
-    plt.figure()
-    plt.plot(case_ids, [r['cl'] for r in results], marker='o')
-    plt.xlabel('Case')
-    plt.ylabel('C_l')
-    plt.title('Lift coefficient')
-    plt.xticks(case_ids, [f'Case {cid}' for cid in case_ids])
-    plt.savefig(results_root / 'CL_comparison.svg', format='svg', bbox_inches='tight')
+    # Plot CL and CD on shared Case axis with twin y-axes
+    fig, ax1 = plt.subplots()
+    line1 = ax1.plot(case_ids, [r['cl'] for r in results], marker='o', label='CL')
+    ax1.set_xlabel('Case')
+    ax1.set_ylabel('CL')
+    ax1.set_xticks(case_ids)
+    ax1.set_xticklabels([f'{cid}' for cid in case_ids])
+    ax1.set_title('Lift and drag coefficients')
 
-    # Plot CD
-    plt.figure()
-    plt.plot(case_ids, [r['cd'] for r in results], marker='o')
-    plt.xlabel('Case')
-    plt.ylabel('C_d')
-    plt.title('Drag coefficient')
-    plt.xticks(case_ids, [f'Case {cid}' for cid in case_ids])
-    plt.savefig(results_root / 'CD_comparison.svg', format='svg', bbox_inches='tight')
+    ax2 = ax1.twinx()
+    line2 = ax2.plot(case_ids, [r['cd'] for r in results], marker='s', color='tab:red', label='CD')
+    ax2.set_ylabel('CD')
+
+    lines = line1 + line2
+    labels = [l.get_label() for l in lines]
+    ax1.legend(lines, labels)
+    fig.savefig(results_root / 'CL_CD_comparison.svg', format='svg', bbox_inches='tight')
 
     # Mach distribution plot
     plt.figure()
@@ -358,8 +369,32 @@ def main() -> None:
     plt.xlabel(r'S/S_{side}')
     plt.ylabel('Mach number')
     plt.xlim(0, 1)
-    plt.legend()
+    plt.legend(loc='lower right')
     plt.savefig(results_root / 'Mach_comparison.svg', format='svg', bbox_inches='tight')
+
+    # Y-plus distribution plot
+    plt.figure()
+    for r in results:
+        x_comb = np.concatenate([-r['s_ps'], r['s_ss']])
+        y_comb = np.concatenate([r['yplus_ps'], r['yplus_ss']])
+        plt.plot(x_comb, y_comb, label=f"Case {r['case_id']}")
+    plt.xlabel(r'S/S_{total}')
+    plt.ylabel('Y Plus')
+    plt.xlim(-1, 1)
+    plt.legend()
+    plt.savefig(results_root / 'YPlus_comparison.svg', format='svg', bbox_inches='tight')
+
+    # Skin friction coefficient plot
+    plt.figure()
+    for r in results:
+        x_comb = np.concatenate([-r['s_ps'], r['s_ss']])
+        cf_comb = np.concatenate([r['cf_ps'], r['cf_ss']])
+        plt.plot(x_comb, cf_comb, label=f"Case {r['case_id']}")
+    plt.xlabel(r'S/S_{total}')
+    plt.ylabel('Skin friction coefficient')
+    plt.xlim(-1, 1)
+    plt.legend()
+    plt.savefig(results_root / 'SkinFrictionCoefficient_comparison.svg', format='svg', bbox_inches='tight')
 
     # Wake total pressure loss plot
     plt.figure()
@@ -380,4 +415,3 @@ def main() -> None:
 
 if __name__ == '__main__':
     main()
-
