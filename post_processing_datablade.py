@@ -23,6 +23,25 @@ def post_processing_datablade():
     total_time = hist['    "Time(sec)"   '].sum()
     last_iter = hist['Inner_Iter'].iloc[-1]
 
+    summary_file = run_dir / "run_summary.txt"
+
+    def append_summary(line):
+        try:
+            with open(summary_file, "a") as f:
+                f.write(line + "\n")
+            with open(run_dir / "su2.log", "a") as f:
+                f.write(line + "\n")
+        except OSError:
+            print(f"[WARNING] Could not append to summary: {line}")
+
+    # Iterations to reach residual 1e-7
+    iter_1e7 = None
+    if '    "rms[Rho]"    ' in hist.columns:
+        mask = hist['    "rms[Rho]"    '] <= 1e-7
+        if mask.any():
+            iter_1e7 = int(hist['Inner_Iter'][mask].iloc[0])
+            append_summary(f"Iter to 1e-7: {iter_1e7}")
+
     # RMS Tracking
     plt.plot(hist['Inner_Iter'], hist['    "rms[Rho]"    '], label=r'$\rho$')               # Density
     plt.plot(hist['Inner_Iter'], hist['    "rms[RhoU]"   '], label=r'$\rho u$')             # Momentum-x
@@ -209,8 +228,18 @@ def post_processing_datablade():
         blade_frac_bl = None
         Re_t_bl = None
         H_bl = None
-        
-    
+
+    cf_mismatch = None
+    if cf_bl is not None:
+        try:
+            su2_ps = np.interp(-ps_frac_bl, s_normPS, friction_coeffPS)
+            su2_ss = np.interp(ss_frac_bl, s_normSS, friction_coeffSS)
+            diff = np.concatenate([su2_ps - cf_ps, su2_ss - cf_ss])
+            cf_mismatch = np.sqrt(np.nanmean(diff**2))
+            append_summary(f"C_f mismatch band: {cf_mismatch:.4f}")
+        except Exception:
+            pass
+
     # field file data extraction
     if file_nonempty(mises_fieldFile):
         all_x, all_y, _, all_p, all_u, all_v, _, all_m = MISES_fieldDataGather(mises_fieldFile)
@@ -233,13 +262,7 @@ def post_processing_datablade():
         rms = np.sqrt(np.nanmean(diff_all**2)) * 100
     
         print(f"\nCombined RMS error = {rms:.4f}%")
-        # Record RMS value for later reporting
-        summary_file = run_dir / "run_summary.txt"
-        try:
-            with open(summary_file, "a") as f:
-                f.write(f"Mach RMS error: {rms:.4f}\n")
-        except OSError:
-            print(f"[WARNING] Could not append RMS to {summary_file}")
+        append_summary(f"Mach RMS error: {rms:.4f}")
     
     
     # ─────────────────────────────────────────────────────────────────────────────
@@ -264,7 +287,7 @@ def post_processing_datablade():
         vol_df, p_plane, pitch, P01, alpha2,
         atol=sizeCellFluid/2, smooth=True, window_length=15, polyorder=4)  # order: n_points 10^2 - s 10^-3
     su2_pitch, su2_loss = su2_res['y_norm'], su2_res['loss']
-    
+
     mises_res = MISES_total_pressure_loss(
         mises_fieldFile, p_plane, pitch, P01,
         atol=0.025, smooth=True, window_length=15, polyorder=4)
@@ -272,6 +295,15 @@ def post_processing_datablade():
         mises_pitch, mises_loss = mises_res['y_norm'], mises_res['loss']
     else:
         mises_pitch, mises_loss = np.array([]), np.array([])
+
+    if len(mises_pitch) and len(su2_pitch):
+        try:
+            su2_interp = np.interp(mises_pitch, su2_pitch, su2_loss)
+            diff = su2_interp - mises_loss
+            wake_err = np.sqrt(np.nanmean(diff**2)) * 100
+            append_summary(f"Wake pressure-loss error: {wake_err:.4f}")
+        except Exception:
+            pass
     
     fig, ax1 = plt.subplots()
 

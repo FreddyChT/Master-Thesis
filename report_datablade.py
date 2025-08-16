@@ -14,6 +14,7 @@ import tkinter as tk
 from tkinter import simpledialog
 import matplotlib.pyplot as plt
 import numpy as np
+import csv
 from matplotlib.collections import LineCollection
 
 
@@ -164,6 +165,8 @@ def parse_performance(section):
             perf["cores"] = int(m.group(1))
         if m := re.search(r"Iteration count:\s*(\d+)", line):
             perf["iterations"] = int(m.group(1))
+        if m := re.search(r"Core-hrs:\s*([\d.eE+-]+)", line):
+            perf["core_hours"] = float(m.group(1))
         if start_idx is None and line.strip().lower().startswith("simulation totals"):
             start_idx = i
         if start_idx is not None and end_idx is None and line.strip().lower().startswith("restart aggr"):
@@ -200,7 +203,14 @@ def parse_log(log_path):
                 data["mach_rms"] = float(line.split(":", 1)[1])
             except (IndexError, ValueError):
                 pass
-            break
+        if "wake" in line.lower() and "loss" in line.lower() and "error" in line.lower():
+            nums = re.findall(NUM_RE, line)
+            if nums:
+                data["wake_loss_error"] = float(nums[0])
+        if "c_f mismatch" in line.lower() or "cf mismatch" in line.lower():
+            nums = re.findall(NUM_RE, line)
+            if nums:
+                data["cf_mismatch_band"] = float(nums[0])
     data["success"] = any("Exit Success" in line for line in text)
     return data
 
@@ -318,6 +328,20 @@ def main():
         data = parse_log(log_file)
         blade_name = bdir.name.replace("_", " ")
         data.update(blade=blade_name, run_dir=run_dir)
+
+        # Iterations to reach residual 1e-7 from history file
+        hist_file = run_dir / f"history_{date_str}_{bdir.name}.csv"
+        if hist_file.is_file():
+            try:
+                hist = np.genfromtxt(hist_file, delimiter=",", names=True)
+                resid = hist['RMS_DENSITY']
+                itnum = hist['INNER_ITER']
+                mask = resid <= 1e-7
+                if mask.any():
+                    data['iter_1e7'] = int(itnum[mask][0])
+            except Exception:
+                pass
+
         summary.append(data)
 
         rl = [f"Blade: {blade_name}"]
@@ -355,6 +379,26 @@ def main():
     divider = "\n" + "-" * 40 + "\n"
     (run_reports_dir / f"{date_str}_Test_{test_num}_report.txt") \
         .write_text(divider.join(report_entries))
+
+    # Summary table per blade
+    table_path = run_reports_dir / f"{date_str}_Test_{test_num}_summary.csv"
+    headers = ["Blade", "Mach_RMS", "Wake_Loss_Error", "C_f_mismatch_band",
+               "Iter_to_1e-7", "Wall_time_s", "Core_h"]
+    with table_path.open("w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(headers)
+        for d in summary:
+            wall_s = d.get("wall_hours", 0.0) * 3600
+            core_h = d.get("core_hours", d.get("wall_hours", 0.0) * d.get("cores", 0))
+            writer.writerow([
+                d["blade"],
+                d.get("mach_rms", np.nan),
+                d.get("wake_loss_error", np.nan),
+                d.get("cf_mismatch_band", np.nan),
+                d.get("iter_1e7", np.nan),
+                wall_s,
+                core_h,
+            ])
 
     blades = [d["blade"] for d in summary]
     times  = np.array([d.get("wall_hours", 0) * 60 for d in summary], float)

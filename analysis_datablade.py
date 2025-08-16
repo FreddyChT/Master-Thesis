@@ -417,5 +417,11 @@ def main():
         configSU2_datablade._summarize_su2_log(run_dir / "su2.log")
         post_processing_datablade.post_processing_datablade()
 
+        # Ensure history file carries date for downstream reports
+        old_hist = run_dir / f"history_{string}_{bladeName}.csv"
+        new_hist = run_dir / f"history_{date_str}_{bladeName}.csv"
+        if old_hist.exists():
+            old_hist.rename(new_hist)
+
 if __name__ == '__main__':
     main()
